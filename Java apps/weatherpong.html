@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Weather Pong</title>
+<style>
+  body {margin:0;overflow:hidden;background:#4676c2 url('data:image/svg+xml,%3Csvg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"%3E%3Ccircle cx="50" cy="50" r="40" fill="%23e0f7fa" opacity="0.2"/%3E%3Cpath d="M10 50 Q25 20 50 50 T90 50" stroke=%22#b2ebf2%22 stroke-width="2" fill="none"/%3E%3C/svg%3E') repeat;}
+  canvas {display:block;margin:auto;background:#cce5ff;}
+  #score {position:absolute;top:10px;left:50%;transform:translateX(-50%);color:#fff;font-size:24px;background:rgba(0,0,0,0.5);padding:5px 10px;border-radius:5px;}
+</style>
+</head>
+<body>
+<div id="score">0 - 0</div>
+<canvas id="pong"></canvas>
+<div id="touch-controls" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:10px;">
+  <button id="up">↑</button>
+  <button id="down">↓</button>
+</div>
+<script>
+const canvas=document.getElementById('pong');
+const ctx=canvas.getContext('2d');
+const w=canvas.width=window.innerWidth;
+const h=canvas.height=window.innerHeight;
+const paddle={w:10,h:100,speed:6};
+const ball={r:8, speedX:4, speedY:2};
+const player={y:paddle.y};
+const ai={y:paddle.y};
+let score={p1:0,p2:0};
+let up=false,down=false,ws=false,s=false;
+
+// Touch button helpers
+const upBtn=document.getElementById('up');
+const downBtn=document.getElementById('down');
+let touchActive={up:false,down:false};
+
+function setTouchDirection(btn, state){
+  if(btn.id==='up'){touchActive.up=state;}
+  else if(btn.id==='down'){touchActive.down=state;}
+}
+upBtn.addEventListener('pointerdown',()=>setTouchDirection(upBtn,true));
+upBtn.addEventListener('pointerup',()=>setTouchDirection(upBtn,false));
+upBtn.addEventListener('pointerleave',()=>setTouchDirection(upBtn,false));
+downBtn.addEventListener('pointerdown',()=>setTouchDirection(downBtn,true));
+downBtn.addEventListener('pointerup',()=>setTouchDirection(downBtn,false));
+downBtn.addEventListener('pointerleave',()=>setTouchDirection(downBtn,false));
+
+function movePaddle(p,up,down){
+  if(up&&p>0){p-=paddle.speed;}
+  if(down&&p<p-h){p+=paddle.speed;}
+  return p;
+}
+function aiMove(){
+  if(ai.y+ball.r<ball.y+10)ai.y+=paddle.speed;
+  if(ai.y-paddle.r>ball.y-10)ai.y-=paddle.speed;
+  if(ai.y<0)ai.y=0;
+  if(ai.y>h-paddle.h)ai.y=h-paddle.h;
+}
+function draw(){
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle='#fff';
+  for(let i=0;i<h;i+=30){ctx.fillRect(w/2-4,i,8,5);}
+  ctx.fillStyle='#ffeb3b';
+  ctx.fillRect(10,ai.y, paddle.w, paddle.h);
+  ctx.fillRect(w-20,player.y, paddle.w, paddle.h);
+  ctx.fillStyle='#fff';
+  ctx.beginPath();
+  ctx.arc(w/2,ball.y,ball.r,0,Math.PI*2);
+  ctx.fill();
+  ball.x+=ball.speedX;
+  ball.y+=ball.speedY;
+  if(ball.y-ball.r<0||ball.y+ball.r>h){ball.speedY*=-1;}
+  if(ball.x-ball.r<10+paddle.w&&ball.y>ai.y&&ball.y<ai.y+paddle.h)ball.speedX*=-1;
+  if(ball.x+ball.r>w-20&&ball.y>player.y&&ball.y<player.y+paddle.h)ball.speedX*=-1;
+  if(ball.x<0){score.p2++; document.getElementById('score').textContent=`${score.p1} - ${score.p2}`; reset();}
+  if(ball.x>w){score.p1++; document.getElementById('score').textContent=`${score.p1} - ${score.p2}`; reset();}
+}
+function reset(){ball.x=w/2;ball.y=h/2;ball.speedX=ball.speedX>0?4:-4;ball.speedY=2*Math.random()-1<0?-2:2;}
+function update(){
+  player.y=movePaddle(player.y, up||ws, down||s);
+  ai.y=aiMove();
+  up=down=ws=s=false;
+}
+function loop(){draw();update();requestAnimationFrame(loop);}
+window.addEventListener('keydown',e=>{
+  if(e.key==='w'||e.key==='ArrowUp')up=true;
+  if(e.key==='s'||e.key==='ArrowDown')down=true;
+  if(e.key==='w'||e.key==='ArrowUp'||e.key==='s'||e.key==='ArrowDown'){
+    ws=true; s=false;
+  }else{
+    if(e.key==='w'||e.key==='ArrowUp')ws=true;
+    if(e.key==='s'||e.key==='ArrowDown')s=true;
+  }
+});
+window.addEventListener('keyup',e=>{
+  if(e.key==='w'||e.key==='ArrowUp')up=false;
+  if(e.key==='s'||e.key==='ArrowDown')down=false;
+  if(e.key==='w'||e.key==='ArrowUp'||e.key==='s'||e.key==='ArrowDown'){
+    ws=false; s=false;
+  }else{
+    if(e.key==='w'||e.key==='ArrowUp')ws=false;
+    if(e.key==='s'||e.key==='ArrowDown')s=false;
+  }
+});
+window.addEventListener('resize',()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight;});
+loop();
+</script>
+</body>
+</html>

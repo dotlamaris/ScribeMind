@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Voice Recorder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            margin-bottom: 40px;
+            color: #ffffff;
+        }
+
+        .record-button {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: none;
+            font-size: 60px;
+            cursor: pointer;
+            margin-bottom: 30px;
+            transition: all 0.2s ease;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .record-button:not(.recording) {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .record-button:not(.recording):hover {
+            background-color: #2563eb;
+            transform: scale(1.05);
+        }
+
+        .record-button.recording {
+            background-color: #ef4444;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .status {
+            margin-bottom: 20px;
+        }
+
+        .timer {
+            font-size: 48px;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        .info {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #cccccc;
+        }
+
+        .segment-info {
+            font-size: 14px;
+            color: #888888;
+            margin-bottom: 30px;
+        }
+
+        .audio-level-bars {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 4px;
+            height: 60px;
+            margin-bottom: 30px;
+        }
+
+        .audio-bar {
+            width: 8px;
+            background-color: #333333;
+            border-radius: 4px;
+            transition: all 0.1s ease;
+        }
+
+        .audio-bar.active {
+            background-color: #3b82f6;
+        }
+
+        .audio-bar.warning {
+            background-color: #fbbf24;
+        }
+
+        .audio-bar.danger {
+            background-color: #ef4444;
+        }
+
+        .recordings-list {
+            margin-top: 40px;
+            text-align: left;
+        }
+
+        .recording-item {
+            background-color: #2a2a2a;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .recording-item audio {
+            max-width: 200px;
+        }
+
+        .error {
+            color: #ef4444;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #2a1a1a;
+            border-radius: 8px;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            border: 2px solid #f59e0b;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f59e0b;
+        }
+
+        .modal-title {
+            color: #f59e0b;
+            font-weight: bold;
+            font-size: 20px;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #f59e0b;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            color: #fbbf24;
+        }
+
+        .modal-question {
+            color: #fbbf24;
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 12px;
+        }
+
+        .modal-answer {
+            color: #d1d5db;
+            line-height: 1.8;
+            font-size: 24px;
+            background-color: #1a1a1a;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 3px solid #f59e0b;
+        }
+
+        .clickable-question {
+            cursor: pointer;
+            color: #fbbf24;
+            text-decoration: underline;
+            transition: color 0.2s ease;
+        }
+
+        .clickable-question:hover {
+            color: #fcd34d;
+        }
+
+        .question-indicator {
+            display: inline-block;
+            background-color: #f59e0b;
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+    </style>
+    <script src="/static/js/logger.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Simple Voice Recorder</h1>
+
+        <div class="user-info" id="userInfo" style="margin-bottom: 20px; padding: 10px; border-radius: 8px; background-color: #2a2a2a;">
+            <strong>User ID:</strong> <span id="userIdDisplay" style="font-size: 24px; color: #3fb950; font-weight: bold;">Loading...</span>
+            <div id="sessionInfo" style="margin-top: 10px; font-size: 14px; color: #888888;">
+                <strong>Session:</strong> <span id="sessionIdDisplay">Not started</span>
+            </div>
+            <div style="margin-top: 10px;">
+                <a href="/logs-viewer" target="_blank" style="font-size: 13px; color: #888888; text-decoration: none; border: 1px solid #444; padding: 4px 10px; border-radius: 4px; display: inline-block;">📊 Logs Viewer</a>
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 20px; display: flex; gap: 15px; align-items: center; justify-content: center; flex-wrap: wrap;">
+            <button id="topRecordButton" onclick="toggleRecording()" style="padding: 10px 20px; background-color: #3b82f6; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; display: none; font-weight: bold;">
+                🎤 Start Recording
+            </button>
+            <div id="topTimerDisplay" style="padding: 10px 20px; background-color: #2a2a2a; border-radius: 5px; border: 2px solid #3fb950; display: none; font-size: 20px; font-family: 'Courier New', monospace; font-weight: bold; color: #3fb950;">
+                <span id="topTimer">00:00</span>
+            </div>
+            <button id="endSessionButton" onclick="endSession()" style="padding: 10px 20px; background-color: #ef4444; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; display: none; font-weight: bold;">
+                🛑 End Session
+            </button>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-navigation" style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #2a2a2a;">
+            <button class="tab-button active" onclick="switchTab('recorder', event)" style="padding: 10px 20px; background: none; border: none; color: #ffffff; cursor: pointer; border-bottom: 3px solid #3fb950; font-size: 16px;">
+                🎤 Recorder
+            </button>
+            <button class="tab-button" onclick="switchTab('content', event)" style="padding: 10px 20px; background: none; border: none; color: #888888; cursor: pointer; border-bottom: 3px solid transparent; font-size: 16px;">
+                📄 Content
+            </button>
+            <button class="tab-button" onclick="switchTab('questions', event)" style="padding: 10px 20px; background: none; border: none; color: #888888; cursor: pointer; border-bottom: 3px solid transparent; font-size: 16px;">
+                💬 Questions
+            </button>
+        </div>
+
+        <!-- Tab Content Container -->
+        <div id="tab-recorder" class="tab-content" style="display: block;">
+        <div class="status">
+            <div class="timer" id="timer">00:00</div>
+            <div class="info" id="status-text">Ready to Record</div>
+            <div class="segment-info" id="segment-info">Segment: 0</div>
+        </div>
+
+        <!-- Answer Type Selection -->
+        <div class="answer-type-selector" style="margin-bottom: 20px;">
+            <label style="margin-right: 10px;">Answer Type:</label>
+            <label style="margin-right: 10px;">
+                <input type="radio" name="answerType" value="concise"> Concise
+            </label>
+            <label style="margin-right: 10px;">
+                <input type="radio" name="answerType" value="detailed" checked> Detailed
+            </label>
+            <label>
+                <input type="radio" name="answerType" value="poetic"> Poetic
+            </label>
+        </div>
+
+        <!-- Auto-play Audio Toggle -->
+        <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+            <label for="autoPlayToggle" style="font-size: 14px; color: #cccccc; cursor: pointer;">🔊 Auto-play answer audio</label>
+            <div id="autoPlayToggleTrack" onclick="toggleAutoPlayAudio()" style="
+                width: 44px; height: 24px; border-radius: 12px; background-color: #3fb950;
+                position: relative; cursor: pointer; transition: background-color 0.2s ease; flex-shrink: 0;">
+                <div id="autoPlayToggleThumb" style="
+                    width: 18px; height: 18px; border-radius: 50%; background: white;
+                    position: absolute; top: 3px; left: 23px;
+                    transition: left 0.2s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.4);"></div>
+            </div>
+        </div>
+
+        <div class="audio-level-bars" id="audioLevelBars">
+            <!-- Audio level bars will be generated by JavaScript -->
+        </div>
+
+        <button class="record-button" id="recordButton" onclick="toggleRecording()">
+            🎤
+        </button>
+
+        <div id="error-message" class="error" style="display: none;"></div>
+
+        <div class="recordings-list">
+            <h3>Recorded Segments</h3>
+            <div id="recordings-container">
+                <!-- Recordings will appear here -->
+            </div>
+        </div>
+        </div>
+
+        <!-- Content Tab -->
+        <div id="tab-content" class="tab-content" style="display: none;">
+            <h2 style="color: #ffffff; margin-bottom: 20px;">📄 Session Transcripts</h2>
+            <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button onclick="clearTranscripts()" style="padding: 10px 20px; background-color: #ef4444; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">
+                    🗑️ Clear Transcripts
+                </button>
+                <button onclick="toggleSortOrder()" style="padding: 10px 20px; background-color: #3b82f6; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">
+                    <span id="sortButtonText">📈 Ascending (Newest Last)</span>
+                </button>
+                <button id="copyAllBtn" onclick="copyAllTranscripts()" style="padding: 10px 20px; background-color: #6366f1; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">
+                    📋 Copy All
+                </button>
+            </div>
+            <div id="transcript-content" style="background-color: #2a2a2a; padding: 20px; border-radius: 8px; line-height: 1.8; color: #cccccc; max-height: 500px; overflow-y: auto;">
+                <p style="color: #888888; text-align: center;">Transcripts will appear here as you record</p>
+            </div>
+        </div>
+
+        <!-- Questions Tab -->
+        <div id="tab-questions" class="tab-content" style="display: none;">
+            <h2 style="color: #ffffff; margin-bottom: 20px;">💬 Question Answers</h2>
+            <div id="questions-content" style="background-color: #2a2a2a; padding: 20px; border-radius: 8px; line-height: 1.8; color: #cccccc; max-height: 500px; overflow-y: auto;">
+                <p style="color: #888888; text-align: center;">Question answers will appear here as you record</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let isRecording = false;
+        let recordingTime = 0;
+        let segmentCounter = 0;
+        let microphonePermissionGranted = false;
+        let audioLevel = 0;
+        
+        // Session identifiers (persist across recordings)
+        let sessionAnimal = null;
+        let sessionNumber = null;
+        
+        // Store transcripts for display
+        let sessionTranscripts = [];
+        
+        // Store answers by segment for modal display
+        let answersBySegment = {};
+        
+        // Transcript sort order (true = ascending, false = descending)
+        let sortTranscriptsAscending = true;
+        
+        // TTS state
+        let isSpeaking = false;
+        let autoPlayAnswerAudio = true;
+        
+        // Get user_id from URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('user_id');
+        
+        // Initialize session identifiers
+        function initializeSession() {
+            sessionAnimal = Math.random();
+            sessionNumber = Math.random();
+            Logger.log('✅ New session initialized:', { sessionAnimal, sessionNumber });
+        }
+
+        // Recording references
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let timerInterval = null;
+        let maxRecordingTimeout = null;
+        let dingTimeout = null;
+        let audioContext = null;
+        let analyser = null;
+        let stream = null;
+        let animationFrame = null;
+        let isAutoPlayingAnswer = false; // Track if we're currently auto-playing TTS
+
+        // DOM elements
+        const recordButton = document.getElementById('recordButton');
+        const timer = document.getElementById('timer');
+        const statusText = document.getElementById('status-text');
+        const segmentInfo = document.getElementById('segment-info');
+        const audioLevelBars = document.getElementById('audioLevelBars');
+        const recordingsContainer = document.getElementById('recordings-container');
+        const errorMessage = document.getElementById('error-message');
+
+        // Initialize audio level bars
+        function initializeAudioBars() {
+            const barCount = 8;
+            audioLevelBars.innerHTML = '';
+
+            for (let i = 0; i < barCount; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'audio-bar';
+                bar.style.height = ((i + 1) * 8 + 16) + 'px';
+                audioLevelBars.appendChild(bar);
+            }
+        }
+
+        // Update audio level visualization
+        function updateAudioLevel() {
+            if (!analyser) return;
+
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(dataArray);
+
+            const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
+            audioLevel = Math.min(average / 50, 1); // Normalize to 0-1 range
+
+            // Update visual bars
+            const bars = audioLevelBars.children;
+            const barCount = bars.length;
+
+            for (let i = 0; i < barCount; i++) {
+                const bar = bars[i];
+                const isActive = audioLevel > (i + 1) / barCount;
+
+                bar.classList.remove('active', 'warning', 'danger');
+
+                if (isActive) {
+                    if (i > 5) {
+                        bar.classList.add('danger');
+                    } else if (i > 3) {
+                        bar.classList.add('warning');
+                    } else {
+                        bar.classList.add('active');
+                    }
+                }
+            }
+
+            if (isRecording) {
+                animationFrame = requestAnimationFrame(updateAudioLevel);
+            }
+        }
+
+        // Request microphone access
+        async function requestMicrophoneAccess() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 44100
+                    }
+                });
+
+                microphonePermissionGranted = true;
+
+                // Setup audio analysis
+                audioContext = new AudioContext();
+                analyser = audioContext.createAnalyser();
+                const microphone = audioContext.createMediaStreamSource(stream);
+
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.85;
+                microphone.connect(analyser);
+
+                showError('');
+                return true;
+            } catch (error) {
+                Logger.error('🎤 Microphone access denied:', error);
+                showError('Microphone access denied. Please allow microphone access and try again.');
+                microphonePermissionGranted = false;
+                return false;
+            }
+        }
+
+        // Format time display
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        // Show error message
+        function showError(message) {
+            if (message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+            } else {
+                errorMessage.style.display = 'none';
+            }
+        }
+
+        // Upload audio to server
+        async function uploadAudioToServer(blob, segmentNumber) {
+            try {
+                const formData = new FormData();
+                formData.append('audio', blob, `segment_${segmentNumber}.webm`);
+                formData.append('user_id', userId);
+                formData.append('segment_no', segmentNumber);
+                formData.append('sessionAnimal', sessionAnimal.toString());
+                formData.append('sessionNumber', sessionNumber.toString());
+
+                // Get selected answer type
+                const answerType = document.querySelector('input[name="answerType"]:checked').value;
+                formData.append('answer_type', answerType);
+
+                const response = await fetch('/api/upload/audio', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                Logger.log('📤 Audio upload result - Full Response:', result);
+                
+                // Log individual fields for visibility
+                if (result.transcript) {
+                    Logger.log('📝 Transcript received:', result.transcript.substring(0, 100) + '...');
+                }
+                if (result.flags) {
+                    Logger.log('🚩 Flags received:', result.flags);
+                } else {
+                    Logger.warn('⚠️ No flags in upload result');
+                }
+                if (result.tags) {
+                    Logger.log('🏷️ Tags received:', result.tags);
+                } else {
+                    Logger.warn('⚠️ No tags in upload result');
+                }
+                if (result.question_answers) {
+                    Logger.log('💬 Question answers received:', {
+                        success: result.question_answers.success,
+                        answer_length: result.question_answers.answer ? result.question_answers.answer.length : 0,
+                        answer_preview: result.question_answers.answer ? result.question_answers.answer.substring(0, 100) + '...' : null,
+                        context_provided: result.question_answers.context_provided,
+                        model: result.question_answers.model
+                    });
+                } else {
+                    Logger.warn('⚠️ No question_answers in upload result');
+                }
+
+                if (result.error) {
+                    Logger.error('📤 Upload failed:', result.error);
+                } else {
+                    Logger.log('✅ Successfully uploaded segment', segmentNumber);
+
+                    // Add transcript to session transcripts if available
+                    if (result.transcript) {
+                        sessionTranscripts.push({
+                            segment: segmentNumber,
+                            text: result.transcript,
+                            timestamp: new Date().toLocaleTimeString(),
+                            flags: result.flags,
+                            tags: result.tags,
+                            question_answers: result.question_answers
+                        });
+                        updateTranscriptDisplay();
+                        
+                        // Auto-switch to Questions tab if new answer arrived
+                        if (result.question_answers && result.question_answers.success && result.question_answers.answer) {
+                            Logger.log(`✨ New answer arrived in upload - triggering auto-switch`);
+                            setTimeout(() => {
+                                Logger.log(`⏱️ 500ms delay complete - calling openAnswerModal now`);
+                                openAnswerModal(result.question_answers.answer);
+                            }, 500);
+                        }
+                    }
+                }
+
+                return result;
+            } catch (error) {
+                Logger.error('📤 Error uploading audio:', error);
+                return { error: error.message };
+            }
+        }
+
+        // Add recording to list
+        function addRecordingToList(blob, segmentNumber) {
+            const recordingItem = document.createElement('div');
+            recordingItem.className = 'recording-item';
+
+            const info = document.createElement('div');
+            info.innerHTML = `
+                <strong>Segment ${segmentNumber}</strong><br>
+                <small>${new Date().toLocaleTimeString()}</small>
+            `;
+
+            const audio = document.createElement('audio');
+            audio.controls = true;
+            audio.src = URL.createObjectURL(blob);
+
+            recordingItem.appendChild(info);
+            recordingItem.appendChild(audio);
+            recordingsContainer.appendChild(recordingItem);
+
+            // Upload audio to server
+            uploadAudioToServer(blob, segmentNumber);
+        }
+
+        // Play a soft notification ding using Web Audio API
+        function playDingSound() {
+            try {
+                const dingAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+                // Two-tone ding: high note then slightly lower
+                [[880, 0, 0.15], [1100, 0.12, 0.12]].forEach(([toneFrequency, delayBeforeNote, noteFadeDuration]) => {
+                    const toneOscillator = dingAudioContext.createOscillator();
+                    const noteVolumeGain = dingAudioContext.createGain();
+                    toneOscillator.connect(noteVolumeGain);
+                    noteVolumeGain.connect(dingAudioContext.destination);
+                    toneOscillator.type = 'sine';
+                    toneOscillator.frequency.setValueAtTime(toneFrequency, dingAudioContext.currentTime + delayBeforeNote);
+                    noteVolumeGain.gain.setValueAtTime(0, dingAudioContext.currentTime + delayBeforeNote);
+                    noteVolumeGain.gain.linearRampToValueAtTime(0.35, dingAudioContext.currentTime + delayBeforeNote + 0.01);
+                    noteVolumeGain.gain.exponentialRampToValueAtTime(0.001, dingAudioContext.currentTime + delayBeforeNote + noteFadeDuration);
+                    toneOscillator.start(dingAudioContext.currentTime + delayBeforeNote);
+                    toneOscillator.stop(dingAudioContext.currentTime + delayBeforeNote + noteFadeDuration + 0.05);
+                });
+
+                Logger.log('🔔 Ding played at 1m45s into segment');
+            } catch (dingSoundError) {
+                Logger.warn('🔔 Could not play ding sound:', dingSoundError);
+            }
+        }
+
+        // Schedule ding at 1m45s (105s) into a segment
+        function scheduleDing() {
+            if (dingTimeout) clearTimeout(dingTimeout);
+            dingTimeout = setTimeout(() => {
+                playDingSound();
+            }, 105000); // 1 min 45 sec
+        }
+
+        // Start new segment (auto-segmentation)
+        async function startNewSegment() {
+            Logger.log('⏲️ Auto-segment triggered (2 min reached)');
+
+            if (!isRecording || !mediaRecorder) {
+                Logger.log('⏲️ Recording not active, cannot start new segment');
+                return;
+            }
+
+            Logger.log('⏲️ Starting new recording segment...');
+
+            // Stop current recording
+            mediaRecorder.stop();
+
+            // Wait briefly for the stop event to process
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Start new recording immediately
+            if (!stream) return;
+
+            try {
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'audio/webm;codecs=opus'
+                });
+
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = function(event) {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = function() {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    segmentCounter++;
+
+                    Logger.log(`🎙️ Audio segment ${segmentCounter} created`);
+                    addRecordingToList(audioBlob, segmentCounter);
+                    updateUI();
+                };
+
+                mediaRecorder.start(1000);
+
+                // Reset timer
+                recordingTime = 0;
+
+                // Start 2-minute timer for next segment
+                if (maxRecordingTimeout) {
+                    clearTimeout(maxRecordingTimeout);
+                }
+                maxRecordingTimeout = setTimeout(() => {
+                    startNewSegment();
+                }, 120000); // 2 minutes
+
+                // Schedule ding at 1m45s into this new segment
+                scheduleDing();
+
+                Logger.log(`🎙️ Started segment ${segmentCounter + 1}`);
+            } catch (error) {
+                Logger.error('🎙️ Failed to start new recording segment:', error);
+                showError('Failed to start new recording segment');
+            }
+        }
+
+        // Start recording
+        async function startRecording() {
+            if (!microphonePermissionGranted) {
+                const granted = await requestMicrophoneAccess();
+                if (!granted) return;
+            }
+
+            if (!stream) return;
+
+            try {
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'audio/webm;codecs=opus'
+                });
+
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = function(event) {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = function() {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    segmentCounter++;
+
+                    Logger.log(`🎙️ Audio segment ${segmentCounter} created`);
+                    addRecordingToList(audioBlob, segmentCounter);
+                    updateUI();
+                };
+
+                mediaRecorder.start(1000);
+
+                isRecording = true;
+                recordingTime = 0;
+                Logger.log('🔴 Recording started');
+
+                // Start timer
+                timerInterval = setInterval(() => {
+                    recordingTime++;
+                    updateUI();
+                }, 1000);
+
+                // Start 2-minute timer for auto-segment
+                maxRecordingTimeout = setTimeout(() => {
+                    startNewSegment();
+                    Logger.log('⏲️ Auto-segment triggered');
+                }, 120000); // 2 minutes
+
+                // Schedule ding at 1m45s into first segment
+                scheduleDing();
+
+                // Start audio level monitoring
+                updateAudioLevel();
+
+                updateUI();
+            } catch (error) {
+                Logger.error('🔴 Failed to start recording:', error);
+                showError('Failed to start recording');
+            }
+        }
+
+        // Stop recording
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                Logger.log('⏹️ Recording stopped');
+
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                }
+
+                if (maxRecordingTimeout) {
+                    clearTimeout(maxRecordingTimeout);
+                    maxRecordingTimeout = null;
+                }
+
+                if (dingTimeout) {
+                    clearTimeout(dingTimeout);
+                    dingTimeout = null;
+                }
+
+                // Release microphone access
+                if (stream) {
+                    stream.getTracks().forEach(track => {
+                        track.stop();
+                    });
+                    stream = null;
+                }
+
+                // Clean up audio context
+                if (audioContext) {
+                    audioContext.close();
+                    audioContext = null;
+                }
+
+                // Reset microphone permission state
+                microphonePermissionGranted = false;
+                analyser = null;
+                Logger.log('🎤 Microphone released');
+
+                if (animationFrame) {
+                    cancelAnimationFrame(animationFrame);
+                    animationFrame = null;
+                }
+
+                updateUI();
+            }
+        }
+
+        // End session
+        function endSession() {
+            if (isRecording) {
+                alert('Please stop recording before ending the session.');
+                return;
+            }
+            
+            sessionAnimal = null;
+            sessionNumber = null;
+            segmentCounter = 0;
+            sessionTranscripts = [];
+            recordingsContainer.innerHTML = '';
+            updateSessionDisplay();
+            updateTranscriptDisplay();
+            Logger.log('🛑 Session ended');
+        }
+        
+        // Toggle recording
+        async function toggleRecording() {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                // Initialize session on first recording if not already set
+                if (sessionAnimal === null || sessionNumber === null) {
+                    initializeSession();
+                    updateSessionDisplay();
+                }
+                await startRecording();
+            }
+        }
+        
+        // Update session display
+        function updateSessionDisplay() {
+            const sessionDisplay = document.getElementById('sessionIdDisplay');
+            const endSessionButton = document.getElementById('endSessionButton');
+            const topRecordButton = document.getElementById('topRecordButton');
+            const topTimerDisplay = document.getElementById('topTimerDisplay');
+            
+            if (sessionAnimal !== null && sessionNumber !== null) {
+                sessionDisplay.textContent = `Active (${(sessionAnimal * 1000).toFixed(0)} / ${(sessionNumber * 1000).toFixed(0)})`;
+                sessionDisplay.style.color = '#3fb950';
+                endSessionButton.style.display = 'inline-block';
+                topRecordButton.style.display = 'inline-block';
+                topTimerDisplay.style.display = 'inline-block';
+            } else {
+                sessionDisplay.textContent = 'Not started';
+                sessionDisplay.style.color = '#888888';
+                endSessionButton.style.display = 'none';
+                topRecordButton.style.display = 'none';
+                topTimerDisplay.style.display = 'none';
+            }
+        }
+
+        // Update UI elements
+        function updateUI() {
+            const timer = document.getElementById('timer');
+            const topTimer = document.getElementById('topTimer');
+            const recordButton = document.getElementById('recordButton');
+            const topRecordButton = document.getElementById('topRecordButton');
+            
+            timer.textContent = formatTime(recordingTime);
+            topTimer.textContent = formatTime(recordingTime);
+            segmentInfo.textContent = `Segment: ${segmentCounter}`;
+
+            if (isRecording) {
+                recordButton.textContent = '🛑';
+                recordButton.classList.add('recording');
+                topRecordButton.textContent = '⏹️ Stop Recording';
+                topRecordButton.style.backgroundColor = '#ef4444';
+                statusText.textContent = 'Recording in Progress';
+            } else {
+                recordButton.textContent = '🎤';
+                recordButton.classList.remove('recording');
+                topRecordButton.textContent = '🎤 Start Recording';
+                topRecordButton.style.backgroundColor = '#3b82f6';
+                statusText.textContent = 'Ready to Record';
+            }
+        }
+
+        // Initialize the app
+        function init() {
+            initializeAudioBars();
+            updateUI();
+            updateSessionDisplay();
+            
+            // Display user_id or warning
+            const userIdDisplay = document.getElementById('userIdDisplay');
+            const userInfo = document.getElementById('userInfo');
+            
+            if (userId) {
+                userIdDisplay.textContent = userId;
+                userInfo.style.backgroundColor = '#2a2a2a';
+                userInfo.style.color = '#ffffff';
+                Logger.log('✅ SyncMind Recorder initialized with userId:', userId);
+            } else {
+                userIdDisplay.textContent = '⚠️ No user_id specified (add ?user_id=your_id to URL)';
+                userInfo.style.backgroundColor = '#2a1a1a';
+                userInfo.style.color = '#ef4444';
+                Logger.warn('⚠️ No user_id provided in URL parameter');
+            }
+        }
+
+        // Tab switching function
+        function switchTab(tabName, event) {
+            const isUserClick = !!event;
+            const wasAutoPlaying = isAutoPlayingAnswer;
+            Logger.log(`🔄 switchTab called: tab=${tabName}, isUserClick=${isUserClick}, isAutoPlayingAnswer=${isAutoPlayingAnswer}`);
+            
+            // Hide all tab contents
+            const allTabs = document.querySelectorAll('.tab-content');
+            allTabs.forEach(tab => {
+                tab.style.display = 'none';
+            });
+
+            // Remove active class from all buttons
+            const allButtons = document.querySelectorAll('.tab-button');
+            allButtons.forEach(button => {
+                button.style.color = '#888888';
+                button.style.borderBottom = '3px solid transparent';
+                button.classList.remove('active');
+            });
+
+            // Show selected tab
+            const selectedTab = document.getElementById(`tab-${tabName}`);
+            if (selectedTab) {
+                selectedTab.style.display = 'block';
+            }
+
+            // Highlight selected button (only if event is defined)
+            if (event) {
+                const selectedButton = event.target;
+                selectedButton.style.color = '#ffffff';
+                selectedButton.style.borderBottom = '3px solid #3fb950';
+                selectedButton.classList.add('active');
+                
+                // TRIGGER: Only cancel audio if user actively navigates away DURING auto-playback
+                if (tabName !== 'questions' && wasAutoPlaying) {
+                    Logger.warn(`👆 User switched away from Questions to ${tabName} during auto-playback - cancelling audio`);
+                    window.speechSynthesis.cancel();
+                    isAutoPlayingAnswer = false;
+                } else if (tabName !== 'questions' && !wasAutoPlaying) {
+                    Logger.log(`👆 User switched away from Questions to ${tabName} (no auto-playback active, audio unaffected)`);
+                }
+            } else {
+                Logger.log(`🤖 Programmatic tab switch to ${tabName} (not from user click)`);
+            }
+
+            // Update transcript display when Content tab is opened
+            if (tabName === 'content') {
+                updateTranscriptDisplay();
+            }
+        }
+
+        // Toggle sort order
+        function toggleSortOrder() {
+            sortTranscriptsAscending = !sortTranscriptsAscending;
+            const buttonText = document.getElementById('sortButtonText');
+            buttonText.textContent = sortTranscriptsAscending ? '📈 Ascending (Newest Last)' : '📉 Descending (Newest First)';
+            updateTranscriptDisplay();
+        }
+        
+        // Update transcript display in Content tab
+        function updateTranscriptDisplay() {
+            const contentDiv = document.getElementById('transcript-content');
+            
+            if (sessionTranscripts.length === 0) {
+                contentDiv.innerHTML = '<p style="color: #888888; text-align: center;">Transcripts will appear here as you record</p>';
+                return;
+            }
+            
+            // Sort transcripts based on sort order
+            const sortedTranscripts = [...sessionTranscripts].sort((a, b) => {
+                const segmentDiff = a.segment - b.segment;
+                return sortTranscriptsAscending ? segmentDiff : -segmentDiff;
+            });
+            
+            // Build HTML for all transcripts and their flags
+            const transcriptsHtml = sortedTranscripts.map(t => {
+                let flagsHtml = '';
+                if (t.flags && t.flags.metadata) {
+                    const metadata = t.flags.metadata;
+                    Logger.log(`🏷️ Segment ${t.segment}: Flags metadata found`, metadata);
+                } else if (t.flags) {
+                    Logger.warn(`⚠️ Segment ${t.segment}: Flags object exists but no metadata`);
+                } else {
+                    Logger.warn(`⚠️ Segment ${t.segment}: No flags data`);
+                }
+                
+                if (t.flags && t.flags.metadata) {
+                    const metadata = t.flags.metadata;
+                    const hasQuestions = metadata.questions && Array.isArray(metadata.questions) && metadata.questions.length > 0;
+                    const hasNotes = metadata.special_notes && Array.isArray(metadata.special_notes) && metadata.special_notes.length > 0;
+                    
+                    if (hasQuestions || hasNotes) {
+                        flagsHtml = `
+                            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #333333;">
+                                <div style="color: #fbbf24; font-weight: bold; margin-bottom: 8px;">📋 Extracted Items:</div>
+                        `;
+                        
+                        if (hasQuestions) {
+                            flagsHtml += `
+                                <div style="margin-bottom: 8px;">
+                                    <span style="color: #60a5fa; font-weight: bold;">❓ Questions:</span>
+                                    <ul style="margin: 5px 0 0 20px; color: #cccccc;">
+                                        ${metadata.questions.map(q => `<li>${q}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            `;
+                        }
+                        
+                        if (hasNotes) {
+                            flagsHtml += `
+                                <div style="margin-bottom: 8px;">
+                                    <span style="color: #a78bfa; font-weight: bold;">📝 Special Notes:</span>
+                                    <ul style="margin: 5px 0 0 20px; color: #cccccc;">
+                                        ${metadata.special_notes.map(note => `<li>${note}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            `;
+                        }
+                        
+                        flagsHtml += `</div>`;
+                    }
+                }
+                
+                // Build tags section if available
+                let tagsHtml = '';
+                if (t.tags && t.tags.metadata) {
+                    const metadata = t.tags.metadata;
+                    Logger.log(`🏷️ Segment ${t.segment}: Tags metadata found`, metadata);
+                } else if (t.tags) {
+                    Logger.warn(`⚠️ Segment ${t.segment}: Tags object exists but no metadata`);
+                } else {
+                    Logger.warn(`⚠️ Segment ${t.segment}: No tags data`);
+                }
+                
+                if (t.tags && t.tags.metadata) {
+                    const metadata = t.tags.metadata;
+                    const userTags = metadata.user_tags && Array.isArray(metadata.user_tags) && metadata.user_tags.length > 0 ? metadata.user_tags : [];
+                    const systemTag = metadata.system_tag && metadata.system_tag.tag ? metadata.system_tag : null;
+                    const allTags = metadata.tags && Array.isArray(metadata.tags) && metadata.tags.length > 0 ? metadata.tags : [];
+                    
+                    if (userTags.length > 0 || systemTag || allTags.length > 0) {
+                        tagsHtml = `
+                            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #333333;">
+                                <div style="color: #10b981; font-weight: bold; margin-bottom: 8px;">🏷️ Tags:</div>
+                        `;
+                        
+                        if (userTags.length > 0) {
+                            tagsHtml += `
+                                <div style="margin-bottom: 8px;">
+                                    <span style="color: #34d399; font-weight: bold;">👤 User-defined:</span>
+                                    <div style="margin: 5px 0 0 20px; color: #cccccc;">
+                                        ${userTags.map(u => `<div style="margin-bottom: 4px;"><strong>${u.tag}</strong>: <span style="font-size: 12px; color: #999999;">${u.description}</span></div>`).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        if (systemTag) {
+                            tagsHtml += `
+                                <div style="margin-bottom: 8px;">
+                                    <span style="color: #6ee7b7; font-weight: bold;">⚙️ System:</span>
+                                    <div style="margin: 5px 0 0 20px; color: #cccccc;">
+                                        <strong>${systemTag.tag}</strong>: <span style="font-size: 12px; color: #999999;">${systemTag.description}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        if (allTags.length > 0 && (userTags.length > 0 || systemTag)) {
+                            tagsHtml += `
+                                <div style="margin-bottom: 8px;">
+                                    <span style="color: #9ca3af; font-weight: bold;">📌 All Tags:</span>
+                                    <div style="margin: 5px 0 0 20px;">
+                                        ${allTags.map(tag => `<span style="display: inline-block; background-color: #2a4a3a; padding: 3px 8px; border-radius: 3px; margin-right: 5px; margin-bottom: 4px; font-size: 12px; color: #d1d5db;">${tag}</span>`).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        tagsHtml += `</div>`;
+                    }
+                }
+                
+                // Build question answers section
+                let answersHtml = '';
+                if (t.question_answers && t.question_answers.success && t.question_answers.answer) {
+                    // Store answer in global object for event listeners
+                    answersBySegment[t.segment] = t.question_answers;
+                    Logger.log(`💬 Segment ${t.segment}: Question answer available`, {
+                        answer_length: t.question_answers.answer.length,
+                        answer_preview: t.question_answers.answer.substring(0, 50) + '...'
+                    });
+                    
+                    answersHtml = `
+                        <div class="answers-container" data-segment="${t.segment}" style="margin-bottom: 12px; margin-top: 0; cursor: pointer; padding: 8px; border-radius: 5px; transition: background-color 0.2s ease;">
+                            <span style="color: #f59e0b; font-weight: bold;">💬 Answers:</span>
+                        </div>
+                    `;
+                } else if (t.question_answers) {
+                    Logger.warn(`⚠️ Segment ${t.segment}: Question answers exists but no success or answer`, {
+                        success: t.question_answers.success,
+                        has_answer: !!t.question_answers.answer
+                    });
+                } else {
+                    Logger.warn(`⚠️ Segment ${t.segment}: No question_answers data`);
+                }
+                
+                const escapedText = t.text.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
+                return `
+                    <div style="margin-bottom: 20px; padding: 15px; background-color: #1a1a1a; border-radius: 5px; border-left: 3px solid #3fb950;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <strong style="color: #3fb950;">Segment ${t.segment}</strong>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <button onclick="copySegmentText('${escapedText}', this)" style="padding: 3px 10px; background: transparent; border: 1px solid #444; border-radius: 4px; color: #888; font-size: 12px; cursor: pointer; transition: all 0.2s;">📋 Copy</button>
+                                <span style="color: #888888; font-size: 14px;">${t.timestamp}</span>
+                            </div>
+                        </div>
+                        ${answersHtml}
+                        <p style="margin: ${answersHtml ? '10px 0 0 0' : '0'}; color: #cccccc; line-height: 1.6;">${t.text}</p>
+                        ${flagsHtml}
+                        ${tagsHtml}
+                    </div>
+                `;
+            }).join('');
+            
+            contentDiv.innerHTML = transcriptsHtml;
+            
+            // Add click listener to entire answers container
+            contentDiv.querySelectorAll('.answers-container').forEach(container => {
+                container.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const segment = this.getAttribute('data-segment');
+                    const answerData = answersBySegment[segment];
+                    if (answerData && answerData.answer) {
+                        openAnswerModal(answerData.answer);
+                    }
+                });
+            });
+            
+            // Auto-scroll to bottom to show latest transcript
+            contentDiv.scrollTop = contentDiv.scrollHeight;
+            
+            Logger.log(`📊 updateTranscriptDisplay: Displaying ${sessionTranscripts.length} transcripts (no auto-switch)`)
+        }
+        
+        // Copy all transcript segments to clipboard
+        function copyAllTranscripts() {
+            if (sessionTranscripts.length === 0) return;
+            const sorted = [...sessionTranscripts].sort((a, b) => {
+                const d = a.segment - b.segment;
+                return sortTranscriptsAscending ? d : -d;
+            });
+            const combined = sorted.map(t => `[Segment ${t.segment} — ${t.timestamp}]\n${t.text}`).join('\n\n');
+            const btn = document.getElementById('copyAllBtn');
+            navigator.clipboard.writeText(combined).then(() => {
+                const original = btn.innerHTML;
+                btn.innerHTML = '✅ Copied All!';
+                btn.style.backgroundColor = '#16a34a';
+                setTimeout(() => {
+                    btn.innerHTML = original;
+                    btn.style.backgroundColor = '#6366f1';
+                }, 2000);
+                Logger.log(`📋 All ${sorted.length} segments copied to clipboard`);
+            }).catch(err => {
+                Logger.warn('📋 Copy all failed:', err);
+            });
+        }
+
+        // Copy segment transcript text to clipboard
+        function copySegmentText(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                const original = btn.innerHTML;
+                btn.innerHTML = '✅ Copied!';
+                btn.style.borderColor = '#3fb950';
+                btn.style.color = '#3fb950';
+                setTimeout(() => {
+                    btn.innerHTML = original;
+                    btn.style.borderColor = '#444';
+                    btn.style.color = '#888';
+                }, 2000);
+                Logger.log('📋 Segment text copied to clipboard');
+            }).catch(err => {
+                Logger.warn('📋 Clipboard copy failed:', err);
+            });
+        }
+
+        // Clear all transcripts
+        function clearTranscripts() {
+            sessionTranscripts = [];
+            updateTranscriptDisplay();
+        }
+
+        // Toggle auto-play answer audio on/off
+        function toggleAutoPlayAudio() {
+            autoPlayAnswerAudio = !autoPlayAnswerAudio;
+            const track = document.getElementById('autoPlayToggleTrack');
+            const thumb = document.getElementById('autoPlayToggleThumb');
+            if (autoPlayAnswerAudio) {
+                track.style.backgroundColor = '#3fb950';
+                thumb.style.left = '23px';
+            } else {
+                track.style.backgroundColor = '#555555';
+                thumb.style.left = '3px';
+                window.speechSynthesis.cancel();
+                isAutoPlayingAnswer = false;
+            }
+            Logger.log(`🔊 Auto-play answer audio toggled: ${autoPlayAnswerAudio}`);
+        }
+
+        // Text-to-speech function
+        function speakAnswerText(answer, isAutoPlay = false) {
+            // Cancel any ongoing speech
+            window.speechSynthesis.cancel();
+            
+            if (!window.speechSynthesis) {
+                Logger.warn('🔊 Speech Synthesis not supported on this browser');
+                return;
+            }
+            
+            isSpeaking = true;
+            if (isAutoPlay) {
+                isAutoPlayingAnswer = true;
+                Logger.log(`🔊 Starting auto-play TTS, setting isAutoPlayingAnswer=true`);
+            }
+            
+            // Create utterance for answer
+            const answerUtterance = new SpeechSynthesisUtterance(answer);
+            answerUtterance.rate = 1;
+            answerUtterance.pitch = 1;
+            answerUtterance.volume = 1;
+            
+            // Handle end of speech
+            answerUtterance.onend = function() {
+                Logger.log(`✅ TTS finished. Setting isSpeaking=false and isAutoPlayingAnswer=false`);
+                isSpeaking = false;
+                if (isAutoPlay) {
+                    isAutoPlayingAnswer = false;
+                }
+            };
+            
+            // Speak answer
+            window.speechSynthesis.speak(answerUtterance);
+        }
+
+        // Update questions tab display
+        function updateQuestionsDisplay() {
+            const questionsDiv = document.getElementById('questions-content');
+            
+            // Collect all answers from all transcripts
+            let allAnswers = [];
+            sessionTranscripts.forEach(t => {
+                if (t.question_answers && t.question_answers.success && t.question_answers.answer) {
+                    allAnswers.push({
+                        answer: t.question_answers.answer,
+                        segment: t.segment
+                    });
+                    Logger.log(`💬 Added answer from segment ${t.segment} to questions display`);
+                } else if (t.question_answers) {
+                    Logger.warn(`⚠️ Segment ${t.segment}: Question answers missing success/answer fields`, {
+                        has_qa: !!t.question_answers,
+                        success: t.question_answers.success,
+                        has_answer: !!t.question_answers.answer
+                    });
+                }
+            });
+            
+            Logger.log(`📊 Questions display collected ${allAnswers.length} answers from ${sessionTranscripts.length} transcripts`);
+            
+            if (allAnswers.length === 0) {
+                Logger.warn('⚠️ No valid answers found to display');
+                questionsDiv.innerHTML = '<p style="color: #888888; text-align: center;">No answers yet</p>';
+                return;
+            }
+            
+            const questionsHtml = allAnswers.map((qa, idx) => `
+                <div style="margin-bottom: 20px; padding: 15px; background-color: #1a1a1a; border-radius: 5px; border-left: 3px solid #f59e0b;">
+                    <div style="color: #888888; font-size: 12px; margin-bottom: 10px;">Segment ${qa.segment}</div>
+                    <div style="color: #d1d5db; margin-left: 10px; font-size: 14px; line-height: 1.6;">${qa.answer}</div>
+                    <button onclick="speakAnswerText('${qa.answer.replace(/'/g, "\\'")}') " style="margin-top: 10px; padding: 5px 10px; background-color: #f59e0b; color: #000; border: none; border-radius: 3px; cursor: pointer; font-weight: bold; font-size: 12px;">🔊 Play Audio</button>
+                </div>
+            `).join('');
+            
+            questionsDiv.innerHTML = questionsHtml;
+        }
+
+        // Open answer (switch to questions tab and play audio)
+        function openAnswerModal(answer) {
+            Logger.log(`📢 openAnswerModal called. isAutoPlayingAnswer=${isAutoPlayingAnswer}, autoPlayAnswerAudio=${autoPlayAnswerAudio}`);
+            updateQuestionsDisplay();
+            Logger.log(`✅ Auto-switching to Questions tab`);
+            switchTab('questions');
+            if (autoPlayAnswerAudio) {
+                Logger.log(`🔊 Auto-playing TTS for answer`);
+                speakAnswerText(answer, true);
+            } else {
+                Logger.log(`🔇 Auto-play is off — skipping TTS`);
+            }
+        }
+
+        // Close answer modal (kept for compatibility)
+        function closeAnswerModal() {
+            window.speechSynthesis.cancel();
+            isSpeaking = false;
+            isAutoPlayingAnswer = false;
+        }
+
+        // Start the app when page loads
+        window.onload = init;
+    </script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+Deep research on the interlinked roles of teachers, tutors, and courses. Teachers can also be tutors and sources of courses; tutors can also be teachers and sources of courses; courses originate from teachers or tutors. The discussion explores how these roles overlap and blur, questioning traditional distinctions.

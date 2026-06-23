@@ -1,0 +1,1 @@
+They're professional speakers but that's an umbrella term and it's not a career; it's a gig. Speaking at events, conventions, or online can be a paid gig, but the occupation isn't clearly defined as 'professional speaker'—it can feel like a teacher or emcee role. The speaker questions whether such occasional, paid speaking qualifies as a true occupation.

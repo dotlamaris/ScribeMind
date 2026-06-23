@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 — Lost in the Void</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: #0a0a0f;
+            color: #e0e0e0;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* animated star background */
+        .stars {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .star {
+            position: absolute;
+            border-radius: 50%;
+            background: white;
+            opacity: 0;
+            animation: twinkle var(--dur) ease-in-out infinite var(--delay);
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: var(--max-op); transform: scale(1); }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 2rem;
+            max-width: 1100px;
+            width: 100%;
+        }
+
+        .glitch-wrap {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 0.25rem;
+        }
+
+        .big-404 {
+            font-family: 'Space Mono', monospace;
+            font-size: clamp(5rem, 18vw, 13rem);
+            font-weight: 700;
+            line-height: 1;
+            background: linear-gradient(135deg, #7f5af0, #2cb67d, #7f5af0);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradShift 4s ease infinite;
+            position: relative;
+        }
+        @keyframes gradShift {
+            0%   { background-position: 0% 50%; }
+            50%  { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* glitch layers */
+        .big-404::before,
+        .big-404::after {
+            content: '404';
+            position: absolute;
+            inset: 0;
+            background: inherit;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .big-404::before {
+            left: 3px;
+            top: -2px;
+            animation: glitch1 3.5s infinite;
+            opacity: 0.5;
+            filter: hue-rotate(60deg);
+        }
+        .big-404::after {
+            left: -3px;
+            top: 2px;
+            animation: glitch2 2.8s infinite;
+            opacity: 0.4;
+            filter: hue-rotate(200deg);
+        }
+        @keyframes glitch1 {
+            0%, 90%, 100% { clip-path: none; transform: none; }
+            92% { clip-path: inset(20% 0 60% 0); transform: translateX(4px); }
+            94% { clip-path: inset(60% 0 10% 0); transform: translateX(-4px); }
+            96% { clip-path: inset(40% 0 30% 0); transform: translateX(2px); }
+        }
+        @keyframes glitch2 {
+            0%, 88%, 100% { clip-path: none; transform: none; }
+            90% { clip-path: inset(50% 0 20% 0); transform: translateX(-3px); }
+            93% { clip-path: inset(10% 0 70% 0); transform: translateX(3px); }
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            font-weight: 300;
+            color: #a0a0b0;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        .description {
+            font-size: 0.95rem;
+            color: #666;
+            margin-bottom: 2.5rem;
+            font-family: 'Space Mono', monospace;
+        }
+
+        /* image grid */
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 2rem auto;
+            max-width: 900px;
+        }
+
+        @media (max-width: 700px) {
+            .image-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .img-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+            aspect-ratio: 4/3;
+            cursor: pointer;
+            transform: scale(1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .img-card:hover {
+            transform: scale(1.04);
+            box-shadow: 0 0 24px rgba(127, 90, 240, 0.5);
+            z-index: 2;
+        }
+        .img-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            filter: grayscale(30%) brightness(0.85);
+            transition: filter 0.3s ease;
+        }
+        .img-card:hover img {
+            filter: grayscale(0%) brightness(1.05);
+        }
+        .img-card .overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, transparent 50%, rgba(10,10,15,0.8) 100%);
+            pointer-events: none;
+        }
+        /* shimmer placeholder while loading */
+        .img-card .shimmer {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, #1a1a2e 25%, #2a2a3e 50%, #1a1a2e 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer {
+            0%   { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .img-card img.loaded + .shimmer { display: none; }
+
+        /* feature card — larger */
+        .img-card.feature {
+            grid-column: span 2;
+            grid-row: span 2;
+            aspect-ratio: unset;
+        }
+
+        .home-btn {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.75rem 2.2rem;
+            background: linear-gradient(135deg, #7f5af0, #2cb67d);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            letter-spacing: 0.05em;
+            transition: opacity 0.2s, transform 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .home-btn:hover { opacity: 0.85; transform: translateY(-2px); }
+
+        .refresh-btn {
+            display: inline-block;
+            margin-top: 1rem;
+            margin-left: 0.75rem;
+            padding: 0.75rem 1.6rem;
+            background: transparent;
+            color: #7f5af0;
+            border: 1px solid #7f5af0;
+            text-decoration: none;
+            border-radius: 6px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            letter-spacing: 0.05em;
+            transition: background 0.2s, transform 0.2s;
+            cursor: pointer;
+        }
+        .refresh-btn:hover {
+            background: rgba(127,90,240,0.15);
+            transform: translateY(-2px);
+        }
+
+        .path-badge {
+            display: inline-block;
+            background: #1c1c2e;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 0.2rem 0.75rem;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8rem;
+            color: #7f5af0;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<div class="container">
+    <div class="glitch-wrap">
+        <div class="big-404">404</div>
+    </div>
+
+    <p class="subtitle">Page not found</p>
+    <p class="description">The path you wandered down doesn't exist.</p>
+
+    <div class="path-badge" id="path-badge">{{ request.path }}</div>
+
+    <div class="image-grid" id="image-grid">
+        <!-- populated by JS -->
+    </div>
+
+    <div>
+        <a href="/" class="home-btn">← Go Home</a>
+        <a href="/voice-app?user_id=dev2" class="home-btn" style="margin-left:0.75rem;">🎙 Voice App</a>
+        <button class="refresh-btn" onclick="loadImages()">↻ New Images</button>
+    </div>
+</div>
+
+<script>
+    // --- stars ---
+    const starsEl = document.getElementById('stars');
+    for (let i = 0; i < 120; i++) {
+        const s = document.createElement('div');
+        s.className = 'star';
+        const size = Math.random() * 2.5 + 0.5;
+        s.style.cssText = `
+            width:${size}px; height:${size}px;
+            left:${Math.random()*100}%; top:${Math.random()*100}%;
+            --dur:${(Math.random()*4+2).toFixed(1)}s;
+            --delay:-${(Math.random()*6).toFixed(1)}s;
+            --max-op:${(Math.random()*0.7+0.2).toFixed(2)};
+        `;
+        starsEl.appendChild(s);
+    }
+
+    // --- image grid ---
+    const TOPICS = ['nature','architecture','abstract','city','space','forest','ocean','minimal','dark','texture'];
+
+    function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    function loadImages() {
+        const grid = document.getElementById('image-grid');
+        grid.innerHTML = '';
+
+        const seeds = shuffle([...Array(20)].map((_, i) => Math.floor(Math.random() * 1000) + i));
+        const sizes = [
+            { w: 800, h: 600, feature: true },
+            { w: 400, h: 300 },
+            { w: 400, h: 300 },
+            { w: 400, h: 300 },
+            { w: 400, h: 300 },
+            { w: 400, h: 300 },
+        ];
+
+        sizes.forEach((size, idx) => {
+            const card = document.createElement('div');
+            card.className = 'img-card' + (size.feature ? ' feature' : '');
+
+            const shimmer = document.createElement('div');
+            shimmer.className = 'shimmer';
+
+            const img = document.createElement('img');
+            const seed = seeds[idx];
+            img.src = `https://picsum.photos/${size.w}/${size.h}?random=${seed}`;
+            img.alt = '';
+            img.loading = 'lazy';
+            img.onload = () => {
+                img.classList.add('loaded');
+                shimmer.style.display = 'none';
+            };
+
+            const overlay = document.createElement('div');
+            overlay.className = 'overlay';
+
+            card.appendChild(shimmer);
+            card.appendChild(img);
+            card.appendChild(overlay);
+            grid.appendChild(card);
+        });
+    }
+
+    loadImages();
+</script>
+
+</body>
+</html>

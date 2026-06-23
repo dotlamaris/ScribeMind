@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Execution Logs Viewer</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .header {
+            background-color: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4CAF50;
+        }
+        .log-entry {
+            background-color: #2d2d2d;
+            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        .log-entry.ERROR {
+            border-left-color: #f44336;
+            background-color: #3d2d2d;
+        }
+        .execution-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+        }
+        .function-name {
+            color: #4CAF50;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .duration {
+            color: #FFB74D;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        .io-section {
+            margin-bottom: 12px;
+        }
+        .io-label {
+            color: #81C784;
+            font-weight: bold;
+            font-size: 1.0em;
+            margin-bottom: 5px;
+        }
+        .io-data {
+            background-color: #1a1a1a;
+            padding: 12px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-size: 0.95em;
+            overflow-x: auto;
+            border-left: 3px solid #4CAF50;
+        }
+        .metadata {
+            font-size: 1em;
+            color: #666;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #333;
+        }
+        .log-entry-toggle {
+            cursor: pointer;
+            color: #888;
+            text-decoration: underline;
+            font-size: 0.9em;
+        }
+        .log-entry-details {
+            display: none;
+            margin-top: 8px;
+            color: #999;
+        }
+
+        .refresh-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .refresh-btn:hover {
+            background-color: #45a049;
+        }
+        .clear-btn {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .clear-btn:hover {
+            background-color: #da190b;
+        }
+        .no-logs {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 40px;
+        }
+        .toc-link {
+            display: block;
+            color: #81C784;
+            text-decoration: none;
+            padding: 8px 12px;
+            margin: 4px 0;
+            border-radius: 4px;
+            background-color: #1a1a1a;
+            transition: background-color 0.2s;
+        }
+        .toc-link:hover {
+            background-color: #333;
+        }
+        .toc-link.error {
+            border-left: 3px solid #f44336;
+        }
+        .toc-duration {
+            float: right;
+            color: #FFB74D;
+            font-weight: bold;
+        }
+        #session-selector {
+            max-width: 400px;
+        }
+        #session-selector option {
+            background-color: #2d2d2d;
+            color: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 Execution Logs Viewer</h1>
+        <p>Real-time view of application execution logs and debugging information</p>
+        <button class="refresh-btn" onclick="refreshLogs()">🔄 Refresh Logs</button>
+        <button class="clear-btn" onclick="clearLogs()">🗑️ Clear Display</button>
+        <button class="refresh-btn" onclick="saveSession()" id="save-session-btn" style="background-color: #2196F3; display: none;">💾 Save Session</button>
+        <select id="session-selector" onchange="changeSession()" style="padding: 10px; border-radius: 4px; background-color: #1a1a1a; color: #e0e0e0; border: 1px solid #4CAF50; margin-left: 10px; cursor: pointer;">
+            <option value="">Loading sessions...</option>
+        </select>
+    </div>
+
+    <div id="toc-container" style="background-color: #2d2d2d; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #FFB74D;">
+        <h2 style="margin-top: 0; color: #FFB74D;">📋 Table of Contents</h2>
+        <div id="toc-links"></div>
+    </div>
+
+    <div id="logs-container">
+        <div class="no-logs">Loading logs...</div>
+    </div>
+
+    <script>
+        let logs = [];
+        let serverSessions = [];
+
+        async function fetchServerSessions() {
+            try {
+                const response = await fetch('/api/logs/sessions');
+                const data = await response.json();
+                
+                serverSessions = data.sessions || [];
+                
+                const selector = document.getElementById('session-selector');
+                const urlParams = new URLSearchParams(window.location.search);
+                const currentSessionId = urlParams.get('log_session_id');
+                
+                // Build options
+                let optionsHtml = '<option value="">All Sessions (In-Memory)</option>';
+                
+                serverSessions.forEach(session => {
+                    const sessionId = session.server_session_id;
+                    const createdAt = new Date(session.created_at).toLocaleString();
+                    const selected = sessionId === currentSessionId ? 'selected' : '';
+                    optionsHtml += `<option value="${sessionId}" ${selected}>${sessionId} (${createdAt})</option>`;
+                });
+                
+                selector.innerHTML = optionsHtml;
+                
+                console.log('Server sessions loaded:', serverSessions.length);
+                
+                let list_of_server_sessions = serverSessions.map(session => session.server_session_id)
+                console.log('all session titles:', list_of_server_sessions);
+                
+            } catch (error) {
+                console.error('Error fetching server sessions:', error);
+                const selector = document.getElementById('session-selector');
+                selector.innerHTML = '<option value="">Error loading sessions</option>';
+            }
+        }
+
+        function changeSession() {
+            const selector = document.getElementById('session-selector');
+            const selectedSessionId = selector.value;
+            
+            // Build new URL with or without session parameter
+            const url = new URL(window.location.href);
+            
+            if (selectedSessionId) {
+                url.searchParams.set('log_session_id', selectedSessionId);
+            } else {
+                url.searchParams.delete('log_session_id');
+            }
+            
+            // Reload page with new parameters
+            window.location.href = url.toString();
+        }
+
+        async function saveSession() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const logSessionId = urlParams.get('log_session_id');
+            
+            if (!logSessionId) {
+                alert('No session selected to save');
+                return;
+            }
+            
+            const saveBtn = document.getElementById('save-session-btn');
+            const originalText = saveBtn.textContent;
+            saveBtn.textContent = '💾 Saving...';
+            saveBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/logs/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        server_session_id: logSessionId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert(`✅ Session saved successfully!\n\nUpdated ${data.result.updated_count} log(s)`);
+                    // Refresh sessions list to show it in saved sessions
+                    await fetchServerSessions();
+                } else {
+                    alert(`❌ Failed to save session:\n${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error saving session:', error);
+                alert(`❌ Error saving session:\n${error.message}`);
+            } finally {
+                saveBtn.textContent = originalText;
+                saveBtn.disabled = false;
+            }
+        }
+
+        function updateSaveButtonVisibility() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const logSessionId = urlParams.get('log_session_id');
+            const saveBtn = document.getElementById('save-session-btn');
+            
+            // Only show save button when viewing a specific session (not in-memory logs)
+            if (logSessionId) {
+                saveBtn.style.display = 'inline-block';
+            } else {
+                saveBtn.style.display = 'none';
+            }
+        }
+
+        async function refreshLogs() {
+            try {
+                // check url parameters for server_session_id
+                const urlParams = new URLSearchParams(window.location.search);
+                const logSessionId = urlParams.get('log_session_id');
+                const logLimit = urlParams.get('log_limit');
+                if (logSessionId)
+                    console.log('log_session_id:', logSessionId);
+                if (logLimit)
+                    console.log('log_limit:', logLimit);
+
+                // Fetch logs from the server
+                apiUrl = '/api/logs';
+                if (logSessionId)
+                    apiUrl += `?log_session_id=${logSessionId}`;
+                if (logLimit)
+                    apiUrl += `&log_limit=${logLimit}`;
+                
+                const response = await fetch(apiUrl);
+                
+                // Check if response is OK
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                // Get the raw text first to see what we're working with
+                const rawText = await response.text();
+                
+                // Try to parse as JSON
+                try {
+                    logs = JSON.parse(rawText);
+                    console.log('Logs:\n', logs)
+                } catch (parseError) {
+                    console.error('JSON Parse Error:', parseError);
+                    console.error('Raw response:', rawText.substring(0, 500));
+                    throw new Error(`Invalid JSON response: ${parseError.message}`);
+                }
+                
+                displayLogs();
+            } catch (error) {
+                console.error('Error fetching logs:', error);
+                document.getElementById('logs-container').innerHTML = 
+                    '<div class="no-logs">Error loading logs: ' + error.message + '</div>';
+            }
+        }
+
+        function displayLogs() {
+            const container = document.getElementById('logs-container');
+
+            // Check if logs is an object/dictionary and has keys
+            if (!logs || typeof logs !== 'object' || Object.keys(logs).length === 0) {
+                container.innerHTML = '<div class="no-logs">No logs available</div>';
+                return;
+            }
+
+            // Convert dictionary to array with execution keys
+            const logsArray = Object.entries(logs).map(([key, value]) => ({
+                execution_key: key,
+                ...value
+            }));
+
+            // Build parent-child hierarchy
+            const rootLogs = [];
+            const childrenMap = {};
+            
+            // First pass: categorize all logs
+            logsArray.forEach(log => {
+                if (!log.parent_execution) {
+                    rootLogs.push(log);
+                } else {
+                    if (!childrenMap[log.parent_execution]) {
+                        childrenMap[log.parent_execution] = [];
+                    }
+                    childrenMap[log.parent_execution].push(log);
+                }
+            });
+            
+            // Second pass: find orphaned children (parent doesn't exist in logs) and promote them to roots
+            const allExecutionKeys = new Set(logsArray.map(log => log.execution_key));
+            Object.keys(childrenMap).forEach(parentKey => {
+                if (!allExecutionKeys.has(parentKey)) {
+                    // Parent doesn't exist - promote children to root level
+                    console.log(`Promoting orphaned children of missing parent: ${parentKey}`);
+                    rootLogs.push(...childrenMap[parentKey]);
+                    delete childrenMap[parentKey];
+                }
+            });
+
+            // Sort roots by start_time
+            rootLogs.sort((a, b) => {
+                const timeA = a.metadata?.start_time || '';
+                const timeB = b.metadata?.start_time || '';
+                return timeA.localeCompare(timeB);
+            });
+
+            // Build table of contents (hierarchical)
+            let tocHtml = '';
+            function buildTocTree(log, depth = 0) {
+                const hasError = log.logs && log.logs.some(l => l.type === 'ERROR');
+                const errorClass = hasError ? 'error' : '';
+                const executionKey = log.execution_key || 'unknown';
+                const duration = log.duration_ms || '0';
+                const indent = depth * 20;
+                
+                tocHtml += `
+                    <a href="#exec-${executionKey}" class="toc-link ${errorClass}" style="padding-left: ${indent + 12}px;">
+                        ${depth > 0 ? '↳ ' : ''}${executionKey}
+                        <span class="toc-duration">${duration}ms</span>
+                    </a>
+                `;
+                
+                // Add children
+                const children = childrenMap[executionKey] || [];
+                children.sort((a, b) => {
+                    const timeA = a.metadata?.start_time || '';
+                    const timeB = b.metadata?.start_time || '';
+                    return timeA.localeCompare(timeB);
+                });
+                children.forEach(child => buildTocTree(child, depth + 1));
+            }
+            
+            rootLogs.forEach(log => buildTocTree(log, 0));
+            document.getElementById('toc-links').innerHTML = tocHtml || '<div style="color: #666;">No executions logged</div>';
+
+            // Build hierarchical log display
+            let html = '';
+
+            function buildLogTree(logExecution, depth = 0) {
+                // Check if log_entries exists and has content
+                const logEntries = logExecution.log_entries || [];
+                const hasLogEntries = Array.isArray(logEntries) && logEntries.length > 0;
+                
+                // Always display the execution, even if it has no log entries
+                const hasError = hasLogEntries && logEntries.some(log => log.type === 'ERROR');
+                const entryClass = hasError ? 'ERROR' : '';
+                const executionKey = logExecution.execution_key || logExecution.function_name || 'Unknown';
+                const indent = depth * 30;
+                const duration = logExecution.duration_ms || 0;
+
+                html += `
+                    <div class="log-entry ${entryClass}" id="exec-${executionKey}" style="margin-left: ${indent}px; ${depth > 0 ? 'border-left: 3px solid #666; margin-top: 10px;' : ''}">
+                        <div class="execution-header">
+                            <span class="function-name">${depth > 0 ? '↳ ' : ''}${executionKey}</span>
+                            <span class="duration">${duration}ms</span>
+                        </div>
+                `;
+
+
+                    // Display message if no log entries
+                    if (!hasLogEntries) {
+                        html += `
+                            <div style="color: #666; font-style: italic; padding: 10px;">
+                                No log entries recorded for this execution
+                            </div>
+                        `;
+                    }
+
+                    // Show inputs and outputs prominently with messages and collapsible details
+                    // NOTE: THIS PARSES THE MESSAGE TO DETERMINE IF IT IS AN INPUT OR OUTPUT
+                    // - Inputs are logs with 'input' or 'called' in the message
+                    // TODO: This is a bit hacky and should be improved
+                    // TODO: maybe use a specific log type for inputs and outputs
+                    // TODO: or use a bigger range of places to check for inputs and outputs
+                    // TODO: or just show all logEntries as collapsible sections with messages and data
+                    // TODO: and maybe add a filter to only show inputs and outputs
+                    logEntries.forEach((logEntry, index) => {
+                        if (logEntry.data) {
+                            const isInput = true;
+                            const isOutput = true;
+
+                            if (isInput || isOutput) {
+                                const label = '📋 DATA';
+                                const dataStr = JSON.stringify(logEntry.data, null, 2);
+                                const dataId = `data-${logExecution.metadata.log_id}-${index}`;
+                                const entryId = `entry-${logExecution.metadata.log_id}-${index}`;
+
+                                // Full log entry details for collapsible section
+                                const fullEntry = JSON.stringify({
+                                    formatted_time: logEntry.formatted_time,
+                                    elapsed_ms: logEntry.elapsed_ms,
+                                    function: logEntry.function,
+                                    line: logEntry.line,
+                                    file: logEntry.file,
+                                    type: logEntry.type,
+                                    message: logEntry.message,
+                                    // data: logEntry.data
+                                }, null, 2);
+
+                                // Create URL for individual log data
+                                const logDataUrl = `/api/logs/${executionKey}/${index}/data`;
+                                
+                                html += `
+                                    <div class="io-section">
+                                        <div class="io-label">${label}</div>
+                                        <div style="color: #FFB74D; margin-bottom: 5px; font-weight: bold;">${logEntry.message}</div>
+                                        <div style="margin-top: 5px;">
+                                            <a href="${logDataUrl}" target="_blank" style="color: #81C784; text-decoration: none; margin-right: 15px;">
+                                                📄 View as JSON
+                                            </a>
+                                            <span class="log-entry-toggle" onclick="toggleDataSection('${dataId}')" style="color: #4CAF50;">
+                                                ▼ Hide data
+                                            </span>
+                                            <div id="${dataId}" class="log-entry-details" style="display: block;">
+                                                <div class="io-data">${dataStr}</div>
+                                            </div>
+                                        </div>
+                                        <div style="margin-top: 5px;">
+                                            <span class="log-entry-toggle" onclick="toggleLogEntry('${entryId}')">
+                                                ⓘ Show log entry details
+                                            </span>
+                                            <div id="${entryId}" class="log-entry-details">
+                                                <pre style="background-color: #0d0d0d; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 0.85em;">${fullEntry}</pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        }
+                    });
+
+                    // Metadata section (always visible)
+                    const metadata = logExecution.metadata || {};
+                    html += `
+                        <div class="metadata">
+                            <strong>Root Function:</strong> ${metadata.root_function || 'N/A'}<br>
+                            <strong>File:</strong> ${metadata.file || 'N/A'}:${metadata.line || 'N/A'}<br>
+                            <strong>Start Time:</strong> ${metadata.start_time || 'N/A'}<br>
+                            <strong>End Time:</strong> ${metadata.end_time || 'N/A'}<br>
+                            <strong>Log ID:</strong> ${metadata.log_id || 'N/A'}
+                        </div>
+                    `;
+
+                    html += `</div>`;
+                
+                // Render children recursively (always, not just when log_entries exist)
+                const children = childrenMap[executionKey] || [];
+                children.sort((a, b) => {
+                    const timeA = a.metadata?.start_time || '';
+                    const timeB = b.metadata?.start_time || '';
+                    return timeA.localeCompare(timeB);
+                });
+                children.forEach(child => buildLogTree(child, depth + 1));
+            }
+
+            rootLogs.forEach(log => buildLogTree(log, 0));
+
+            container.innerHTML = html || '<div class="no-logs">No log entries found</div>';
+        }
+
+        async function clearLogs() {
+            if (!confirm('This will start a new log session and clear all in-memory logs. Continue?')) {
+                return;
+            }
+            
+            const clearBtn = document.querySelector('.clear-btn');
+            const originalText = clearBtn.textContent;
+            clearBtn.textContent = '🗑️ Clearing...';
+            clearBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/logs/clear', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert(`✅ Log session cleared!\n\nOld session: ${data.old_session_id}\nNew session: ${data.new_session_id}\nCleared ${data.cleared_count} logs`);
+                    
+                    // Refresh the page to show the new empty session
+                    await fetchServerSessions();
+                    await refreshLogs();
+                } else {
+                    alert(`❌ Failed to clear logs:\n${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error clearing logs:', error);
+                alert(`❌ Error clearing logs:\n${error.message}`);
+            } finally {
+                clearBtn.textContent = originalText;
+                clearBtn.disabled = false;
+            }
+        }
+
+        function toggleLogEntry(entryId) {
+            const details = document.getElementById(entryId);
+            const toggle = event.target;
+
+            if (details.style.display === 'none' || details.style.display === '') {
+                details.style.display = 'block';
+                toggle.textContent = 'ⓘ Hide log entry details';
+            } else {
+                details.style.display = 'none';
+                toggle.textContent = 'ⓘ Show log entry details';
+            }
+        }
+
+        function toggleDataSection(dataId) {
+            const details = document.getElementById(dataId);
+            const toggle = event.target;
+
+            if (details.style.display === 'none') {
+                details.style.display = 'block';
+                toggle.innerHTML = '▼ Hide data';
+            } else {
+                details.style.display = 'none';
+                toggle.innerHTML = '▶ Show data';
+            }
+        }
+
+        // Auto-refresh every 5 seconds
+        // setInterval(refreshLogs, 5000);
+
+        // Initial load
+        async function initialize() {
+            await fetchServerSessions();
+            await refreshLogs();
+            updateSaveButtonVisibility();
+        }
+        
+        initialize();
+    </script>
+</body>
+</html>
