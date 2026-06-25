@@ -1,0 +1,28 @@
+~/workspace$ python nanobot_template.py
+Traceback (most recent call last):
+  File "/home/runner/workspace/nanobot_template.py", line 12, in <module>
+    asyncio.run(main())
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/nanobot_template.py", line 7, in main
+    async with Nanobot.from_config() as bot:
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/nanobot/nanobot.py", line 120, in from_config
+    loop = AgentLoop.from_config(
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/nanobot/agent/loop.py", line 361, in from_config
+    provider = extra.pop("provider", None) or make_provider(config)
+                                              ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/nanobot/providers/factory.py", line 166, in make_provider
+    provider = _make_provider_core(config, preset_name=preset_name, preset=preset, model=model)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/nanobot/providers/factory.py", line 67, in _make_provider_core
+    raise ValueError(f"No API key configured for provider '{provider_name}'.")
+ValueError: No API key configured for provider 'None'.

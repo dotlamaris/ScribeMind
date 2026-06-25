@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "id": "dream",
+      "name": "dream",
+      "enabled": true,
+      "schedule": {
+        "kind": "every",
+        "atMs": null,
+        "everyMs": 7200000,
+        "expr": null,
+        "tz": null
+      },
+      "payload": {
+        "kind": "system_event",
+        "message": "",
+        "deliver": false,
+        "channel": null,
+        "to": null,
+        "channelMeta": {},
+        "sessionKey": null,
+        "originChannel": null,
+        "originChatId": null,
+        "originMetadata": {}
+      },
+      "state": {
+        "nextRunAtMs": 1782376245293,
+        "lastRunAtMs": null,
+        "lastStatus": null,
+        "lastError": null,
+        "runHistory": []
+      },
+      "createdAtMs": 1782369045193,
+      "updatedAtMs": 1782369045193,
+      "deleteAfterRun": false
+    },
+    {
+      "id": "heartbeat",
+      "name": "heartbeat",
+      "enabled": true,
+      "schedule": {
+        "kind": "every",
+        "atMs": null,
+        "everyMs": 1800000,
+        "expr": null,
+        "tz": "UTC"
+      },
+      "payload": {
+        "kind": "system_event",
+        "message": "",
+        "deliver": false,
+        "channel": null,
+        "to": null,
+        "channelMeta": {},
+        "sessionKey": null,
+        "originChannel": null,
+        "originChatId": null,
+        "originMetadata": {}
+      },
+      "state": {
+        "nextRunAtMs": 1782370845293,
+        "lastRunAtMs": null,
+        "lastStatus": null,
+        "lastError": null,
+        "runHistory": []
+      },
+      "createdAtMs": 1782369045286,
+      "updatedAtMs": 1782369045286,
+      "deleteAfterRun": false
+    }
+  ]
+}
