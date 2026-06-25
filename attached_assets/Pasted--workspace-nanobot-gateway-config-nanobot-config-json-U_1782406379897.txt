@@ -1,0 +1,161 @@
+~/workspace$ nanobot gateway --config .nanobot/config.json
+Using config: /home/runner/workspace/.nanobot/config.json
+🐈 Starting nanobot gateway version 0.2.2 on port 18790...
+2026-06-25 16:51:16 | INFO  | - | Runtime model switched for next turn: nemotron-3-nano:30b-cloud -> nemotron-3-nano:30b-cloud
+2026-06-25 16:51:16 | INFO  | - | Registered 19 tools: ['apply_patch', 'run_cli_app', 'complete_goal', 'cron', 'edit_file', 'exec', 'find_files', 'grep', 'list_dir', 'list_exec_sessions', 'long_task', 'message', 'read_file', 'spawn', 'web_fetch', 'web_search', 'write_file', 'write_stdin', 'my']
+2026-06-25 16:51:16 | INFO  | - | WebSocket channel enabled
+✓ Channels enabled: websocket
+✓ Heartbeat: every 1800s
+2026-06-25 16:51:16 | INFO  | - | Cron: registered system job 'dream' (dream)
+✓ Dream: every 2h
+2026-06-25 16:51:16 | INFO  | - | Cron: registered system job 'heartbeat' (heartbeat)
+2026-06-25 16:51:16 | INFO  | - | Cron service started with 2 jobs
+2026-06-25 16:51:16 | INFO  | - | Agent loop started
+2026-06-25 16:51:16 | INFO  | - | Starting websocket channel...
+2026-06-25 16:51:16 | INFO  | - | Outbound dispatcher started
+2026-06-25 16:51:16 | INFO  | websocket | WebSocket server listening on ws://0.0.0.0:5000/
+2026-06-25 16:51:16 | ERROR | - | Failed to start channel websocket
+Traceback (most recent call last):
+
+  File "/home/runner/workspace/.pythonlibs/bin/nanobot", line 8, in <module>
+    sys.exit(app())
+    │   │    └ <typer.main.Typer object at 0x7fe3bfc57cd0>
+    │   └ <built-in function exit>
+    └ <module 'sys' (built-in)>
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/typer/main.py", line 1137, in __call__
+    return get_command(self)(*args, **kwargs)
+           │           │      │       └ {}
+           │           │      └ ()
+           │           └ <typer.main.Typer object at 0x7fe3bfc57cd0>
+           └ <function get_command at 0x7fe3bfbe0c20>
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/typer/_click/core.py", line 807, in __call__
+    return self.main(*args, **kwargs)
+           │    │     │       └ {}
+           │    │     └ ()
+           │    └ <function TyperGroup.main at 0x7fe3bfbe0680>
+           └ <TyperGroup nanobot>
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/typer/core.py", line 1193, in main
+    return _main(
+           └ <function _main at 0x7fe3bfbce7a0>
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/typer/core.py", line 183, in _main
+    rv = self.invoke(ctx)
+         │    │      └ <typer._click.core.Context object at 0x7fe3bda46690>
+         │    └ <function TyperGroup.invoke at 0x7fe3bfbe0220>
+         └ <TyperGroup nanobot>
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/typer/core.py", line 1115, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+           │               │       │       │      └ <typer._click.core.Context object at 0x7fe3be2bfbd0>
+           │               │       │       └ <function TyperGroup.invoke at 0x7fe3bfbe0220>
+           │               │       └ <TyperGroup gateway>
+           │               └ <typer._click.core.Context object at 0x7fe3be2bfbd0>
+           └ <function TyperGroup.invoke.<locals>._process_result at 0x7fe3bda36480>
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/typer/core.py", line 1096, in invoke
+    rv = super().invoke(ctx)
+                        └ <typer._click.core.Context object at 0x7fe3be2bfbd0>
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/typer/_click/core.py", line 746, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           │   │      │    │           │   └ {'config': '.nanobot/config.json', 'port': None, 'workspace': None, 'verbose': False, 'foreground': False, 'background': False}
+           │   │      │    │           └ <typer._click.core.Context object at 0x7fe3be2bfbd0>
+           │   │      │    └ <function create_gateway_app.<locals>.gateway at 0x7fe3bda35e40>
+           │   │      └ <TyperGroup gateway>
+           │   └ <function Context.invoke at 0x7fe3bfb0dee0>
+           └ <typer._click.core.Context object at 0x7fe3be2bfbd0>
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/typer/_click/core.py", line 489, in invoke
+    return callback(*args, **kwargs)
+           │         │       └ {'config': '.nanobot/config.json', 'port': None, 'workspace': None, 'verbose': False, 'foreground': False, 'background': False}
+           │         └ ()
+           └ <function create_gateway_app.<locals>.gateway at 0x7fe3bda35e40>
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/typer/main.py", line 1515, in wrapper
+    return callback(**use_params)
+           │          └ {'ctx': <typer._click.core.Context object at 0x7fe3be2bfbd0>, 'port': None, 'workspace': None, 'verbose': False, 'config': '....
+           └ <function create_gateway_app.<locals>.gateway at 0x7fe3bda34720>
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/nanobot/cli/gateway.py", line 161, in gateway
+    run_gateway(cfg, port=port)
+    │           │         └ None
+    │           └ Config(agents=AgentsConfig(defaults=AgentDefaults(workspace='~/.nanobot/workspace', model_preset='primary', model='anthropic/...
+    └ <function _run_gateway at 0x7fe3bda34180>
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/nanobot/cli/commands.py", line 1262, in _run_gateway
+    asyncio.run(run())
+    │       │   └ <function _run_gateway.<locals>.run at 0x7fe3bd5f8c20>
+    │       └ <function run at 0x7fe3bfde68e0>
+    └ <module 'asyncio' from '/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/__init__.py'>
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/runners.py", line 190, in run
+    return runner.run(main)
+           │      │   └ <coroutine object _run_gateway.<locals>.run at 0x7fe3bd59e5c0>
+           │      └ <function Runner.run at 0x7fe3bfc52de0>
+           └ <asyncio.runners.Runner object at 0x7fe3bd9f0d90>
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           │    │     │                  └ <Task pending name='Task-1' coro=<_run_gateway.<locals>.run() running at /home/runner/workspace/.pythonlibs/lib/python3.11/si...
+           │    │     └ <function BaseEventLoop.run_until_complete at 0x7fe3bfc50a40>
+           │    └ <_UnixSelectorEventLoop running=True closed=False debug=False>
+           └ <asyncio.runners.Runner object at 0x7fe3bd9f0d90>
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/base_events.py", line 641, in run_until_complete
+    self.run_forever()
+    │    └ <function BaseEventLoop.run_forever at 0x7fe3bfc509a0>
+    └ <_UnixSelectorEventLoop running=True closed=False debug=False>
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/base_events.py", line 608, in run_forever
+    self._run_once()
+    │    └ <function BaseEventLoop._run_once at 0x7fe3bfc527a0>
+    └ <_UnixSelectorEventLoop running=True closed=False debug=False>
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/base_events.py", line 1936, in _run_once
+    handle._run()
+    │      └ <function Handle._run at 0x7fe3bfde7240>
+    └ <Handle Task.task_wakeup(<Task finishe...eady in use")>)>
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/events.py", line 84, in _run
+    self._context.run(self._callback, *self._args)
+    │    │            │    │           │    └ <member '_args' of 'Handle' objects>
+    │    │            │    │           └ <Handle Task.task_wakeup(<Task finishe...eady in use")>)>
+    │    │            │    └ <member '_callback' of 'Handle' objects>
+    │    │            └ <Handle Task.task_wakeup(<Task finishe...eady in use")>)>
+    │    └ <member '_context' of 'Handle' objects>
+    └ <Handle Task.task_wakeup(<Task finishe...eady in use")>)>
+> File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/nanobot/channels/manager.py", line 198, in _start_channel
+    await channel.start()
+          │       └ <function WebSocketChannel.start at 0x7fe3bd5d8720>
+          └ <nanobot.channels.websocket.WebSocketChannel object at 0x7fe3bf7faa50>
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/nanobot/channels/websocket.py", line 508, in start
+    await self._server_task
+          │    └ <Task finished name='Task-12' coro=<WebSocketChannel.start.<locals>.runner() done, defined at /home/runner/workspace/.pythonl...
+          └ <nanobot.channels.websocket.WebSocketChannel object at 0x7fe3bf7faa50>
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/nanobot/channels/websocket.py", line 486, in runner
+    server = await serve(
+                   └ <class 'websockets.asyncio.server.serve'>
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/websockets/asyncio/server.py", line 847, in __await_impl__
+    server = await self.create_server
+                   │    └ <coroutine object BaseEventLoop.create_server at 0x7fe3bdbdfc10>
+                   └ <websockets.asyncio.server.serve object at 0x7fe3bd60a310>
+  File "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/base_events.py", line 1536, in create_server
+    raise OSError(err.errno, msg) from None
+                             └ "error while attempting to bind on address ('0.0.0.0', 5000): address already in use"
+
+OSError: [Errno 98] error while attempting to bind on address ('0.0.0.0', 5000): address already in use
+
+Error: Gateway crashed unexpectedly
+Traceback (most recent call last):
+  File 
+"/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/nanobot/cli/commands.py", 
+line 1226, in run
+    await runtime_tasks
+  File 
+"/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/nanobot/cli/commands.py", 
+line 1132, in _health_server
+    server = await asyncio.start_server(handle, host, health_port)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File 
+"/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/streams.py
+", line 84, in start_server
+    return await loop.create_server(factory, host, port, **kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File 
+"/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/base_event
+s.py", line 1536, in create_server
+    raise OSError(err.errno, msg) from None
+OSError: [Errno 98] error while attempting to bind on address ('127.0.0.1', 18790): address 
+already in use
+
+2026-06-25 16:51:16 | INFO  | - | Agent loop stopping
+2026-06-25 16:51:16 | INFO  | - | Stopping all channels...
+2026-06-25 16:51:16 | WARNING | websocket | server task error during shutdown: [Errno 98] error while attempting to bind on address ('0.0.0.0', 5000): address already in use
+2026-06-25 16:51:16 | INFO  | - | Stopped websocket channel
+~/workspace$ 
