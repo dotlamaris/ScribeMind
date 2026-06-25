@@ -26,3 +26,8 @@ outputType = "webview"
 
 [agent]
 expertMode = true
+
+[[ports]]
+localPort = 8765
+externalPort = 8000
+exposeLocalhost = true
