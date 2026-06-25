@@ -16,16 +16,20 @@ args = "Start application"
 name = "Start application"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "HOME=/home/runner/workspace nanobot gateway"
-waitForPort = 8765
-
 [workflows.workflow.metadata]
 outputType = "webview"
 
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "HOME=/home/runner/workspace nanobot gateway"
+waitForPort = 5000
+
 [agent]
 expertMode = true
+
+[[ports]]
+localPort = 5000
+externalPort = 80
 
 [[ports]]
 localPort = 8765
