@@ -59,14 +59,21 @@
         "originMetadata": {}
       },
       "state": {
-        "nextRunAtMs": 1782370845293,
-        "lastRunAtMs": null,
-        "lastStatus": null,
+        "nextRunAtMs": 1782374129920,
+        "lastRunAtMs": 1782372329918,
+        "lastStatus": "ok",
         "lastError": null,
-        "runHistory": []
+        "runHistory": [
+          {
+            "runAtMs": 1782372329918,
+            "status": "ok",
+            "durationMs": 2,
+            "error": null
+          }
+        ]
       },
       "createdAtMs": 1782369045286,
-      "updatedAtMs": 1782369045286,
+      "updatedAtMs": 1782372329920,
       "deleteAfterRun": false
     }
   ]

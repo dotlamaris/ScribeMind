@@ -16,3 +16,10 @@ async def main() -> None:
 
 
 asyncio.run(main())
+
+
+async def run_agent(query):
+    async with Nanobot.from_config(config_path) as bot:
+        result = await bot.run(query)
+        return result.content
+
