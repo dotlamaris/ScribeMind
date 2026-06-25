@@ -35,3 +35,7 @@ externalPort = 80
 localPort = 18790
 externalPort = 3000
 exposeLocalhost = true
+
+[deployment]
+deploymentTarget = "vm"
+run = ["nanobot", "gateway", "--config", ".nanobot/config.json"]
