@@ -31,3 +31,6 @@ expertMode = true
 localPort = 8765
 externalPort = 8000
 exposeLocalhost = true
+
+[[ports]]
+localPort = 18790
