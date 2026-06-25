@@ -21,7 +21,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "HOME=/home/runner/workspace nanobot gateway"
+args = "nanobot gateway --config .nanobot/config.json"
 waitForPort = 5000
 
 [agent]
@@ -30,11 +30,6 @@ expertMode = true
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 8765
-externalPort = 8000
-exposeLocalhost = true
 
 [[ports]]
 localPort = 18790
