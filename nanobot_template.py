@@ -9,12 +9,6 @@ config_path = os.path.join(
 )
 
 
-async def main() -> None:
-    async with Nanobot.from_config(config_path) as bot:
-        result = await bot.run("What time is it in Tokyo?")
-    print(result.content)
-
-
 async def async_agent(query):
     async with Nanobot.from_config(config_path) as bot:
         result = await bot.run(query)
@@ -23,3 +17,7 @@ async def async_agent(query):
 
 def run_agent(query):
     return asyncio.run(async_agent(query))
+
+
+if __name__ == "__main__":
+    run_agent("What time is it in Tokyo?")

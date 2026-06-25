@@ -6,7 +6,7 @@ from flask import request, jsonify
 from logger import ExecutionLogger
 from groq_client import GroqClient
 from groq_template import flag_transcript_with_llm, tag_transcript_with_llm
-from run_agent import AIAgent
+from nanobot_template import run_agent
 
 # In-memory transcript history keyed by user_id
 # Each entry: {"segment_no": int, "transcript": str}
@@ -70,7 +70,6 @@ def question_answer_response(
 
         full_prompt = f"{system_prompt}\n\n{user_message}"
 
-        
         # log it
         logger.log(
             "question_answer_response() initiated",
@@ -82,25 +81,13 @@ def question_answer_response(
             },
         )
 
-        # 
+        #
 
-        # Use Hermes Agent (AIAgent) to answer the questions
+        # Use nanobot to answer the questions
         try:
-            agent = AIAgent(
-                model=model,
-                quiet_mode=True,
-                skip_context_files=True,
-                skip_memory=True,
-            )
-
-            result = agent.run_conversation(
-                user_message=full_prompt,
-                # max_tokens=100000,
-            )
-
-            response_text = result.get("final_response")
-            tokens_used = result.get("total_tokens")
-            tool_calls = result.get("api_calls")
+            response = run_agent(full_prompt)
+            result = response
+            response_text = result
 
             # calculate time elapsed
             start_time = now
