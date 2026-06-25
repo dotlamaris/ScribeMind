@@ -15,11 +15,11 @@ async def main() -> None:
     print(result.content)
 
 
-asyncio.run(main())
-
-
-async def run_agent(query):
+async def async_agent(query):
     async with Nanobot.from_config(config_path) as bot:
         result = await bot.run(query)
         return result.content
 
+
+def run_agent(query):
+    return asyncio.run(async_agent(query))
