@@ -3,3 +3,4 @@ groq
 pytz
 requests
 wonderwords
+nanobot-ai
