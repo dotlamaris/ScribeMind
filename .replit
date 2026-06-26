@@ -10,37 +10,11 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Start Voice App"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Start application"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "Nanobot Gateway"
-
-[[workflows.workflow]]
-name = "Start NanoBot Gateway"
-author = "agent"
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "nanobot gateway --config .nanobot/config.json"
-waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
-
-[[workflows.workflow]]
-name = "Start Voice App"
-mode = "sequential"
-author = 16632318
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python server.py"
 
 [[workflows.workflow]]
 name = "Start application"
