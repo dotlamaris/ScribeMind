@@ -22,10 +22,6 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "export HOME=/home/runner/workspace"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
 args = "python server.py"
 waitForPort = 5000
 
