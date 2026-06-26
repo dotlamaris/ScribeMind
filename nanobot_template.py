@@ -20,4 +20,6 @@ def run_agent(query):
 
 
 if __name__ == "__main__":
-    run_agent("What time is it in Tokyo?")
+    output = run_agent("What time is it in Tokyo?")
+    with open("output.txt", "w") as f:
+        f.write(output)

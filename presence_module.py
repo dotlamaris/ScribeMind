@@ -87,7 +87,6 @@ def question_answer_response(
         try:
             response = run_agent(full_prompt)
             result = response
-            response_text = result
 
             # calculate time elapsed
             start_time = now
@@ -105,14 +104,14 @@ def question_answer_response(
             log_data={
                 "full_response": result,
                 "num_questions": len(questions),
-                "response_length": len(response_text),
+                "response_length": len(result),
             },
         )
         logger.commit()
 
         return {
             "success": True,
-            "answer": response_text,
+            "answer": result,
             "context_provided": bool(context),
             "model": model,
         }
