@@ -12,6 +12,10 @@ author = "agent"
 task = "workflow.run"
 args = "Start application"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Nanobot Gateway"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -23,6 +27,18 @@ outputType = "webview"
 task = "shell.exec"
 args = "python server.py"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Nanobot Gateway"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "nanobot gateway --config .nanobot/config.json"
+waitForPort = 8000
 
 [agent]
 expertMode = true
@@ -37,4 +53,4 @@ externalPort = 8000
 
 [deployment]
 deploymentTarget = "vm"
-run = ["python", "server.py"]
+run = ["bash", "-c", "python server.py & nanobot gateway --config .nanobot/config.json & wait"]
