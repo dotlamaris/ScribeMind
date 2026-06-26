@@ -52,5 +52,5 @@ localPort = 8000
 externalPort = 8000
 
 [deployment]
-deploymentTarget = "cloudrun"
-run = ["nanobot", "gateway", "--config", ".nanobot/config.json"]
+deploymentTarget = "vm"
+run = ["bash", "-c", "python server.py & nanobot gateway --config .nanobot/config.json & wait"]
