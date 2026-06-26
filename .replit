@@ -10,12 +10,12 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Start application"
+args = "Start Voice App"
 
 [[workflows.workflow]]
 name = "Start NanoBot Gateway"
 author = "agent"
-mode = "parallel"
+mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
