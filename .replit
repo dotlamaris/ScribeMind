@@ -15,14 +15,19 @@ args = "Start application"
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "webview"
+mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "nanobot gateway --config .nanobot/config.json"
 waitForPort = 5000
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python server.py"
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [agent]
 expertMode = true
