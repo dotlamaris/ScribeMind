@@ -119,7 +119,6 @@ def flag_transcript_with_simple_regex(
 
 
 def question_answer_response(
-    questions: list,
     context: str = "",
     model: str = "nemotron-3-nano:30b",
     answer_type: str = "detailed",
@@ -143,16 +142,15 @@ def question_answer_response(
         if answer_type == "hermes":
             system_prompt += " Respond in a reddit post top comment poetic style with philosophical depth, conceptual brevity, and absolute clarity. 40-80 words per answer max."
 
-        questions_text = "\n".join([f"{i + 1}. {q}" for i, q in enumerate(questions)])
 
         if context:
             user_message = (
-                f"CONTEXT:\n{context}\n\nANSWER THESE QUESTIONS:\n{questions_text}"
+                f"CONTEXT:\n{context}"
             )
         else:
-            user_message = f"ANSWER THESE QUESTIONS:\n{questions_text}"
+            user_message = " "
 
-        full_prompt = f"{system_prompt}\n\n{user_message}"
+        full_prompt = f"{system_prompt}\n{user_message}"
 
         # log it
         logger.log(
@@ -301,13 +299,8 @@ def answer_transcript_questions(flag_result, user_id, answer_type):
     """Build context from recent transcripts and run Q&A on flagged questions. Returns question_answers dict."""
     logger = ExecutionLogger()
     try:
-        questions = flag_result.get("metadata", {}).get("questions", []) if flag_result else []
 
-        if not questions:
-            logger.log("No questions flagged, skipping Q&A")
-            return None
-
-        recent_transcripts = get_recent_transcripts(user_id, limit=5)
+        recent_transcripts = get_recent_transcripts(user_id)
         context_parts = [
             f"[Segment {t.get('segment_no', '?')}] {t.get('transcript', '')}"
             for t in recent_transcripts
@@ -315,13 +308,11 @@ def answer_transcript_questions(flag_result, user_id, answer_type):
         combined_context = "\n\n".join(context_parts)
 
         logger.log("Q&A context prepared", log_data={
-            "questions": questions,
             "recent_segments": len(recent_transcripts),
             "context_chars": len(combined_context),
         })
 
         result = question_answer_response(
-            questions=questions,
             context=combined_context,
             answer_type=answer_type,
         )
