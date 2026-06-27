@@ -35,7 +35,7 @@ def get_recent_transcripts(
     return filtered[-limit:]
 
 
-_QUESTION_RE = re.compile(r'[^.!?]*\?')
+_QUESTION_RE = re.compile(r'[^.!?]*(?:\?|question)[^.!?]*', re.IGNORECASE)
 _SPECIAL_NOTE_RE = re.compile(r'(?:special note|make a note|note this down|note that)[:\s]+(.+?)(?:[.!?]|$)', re.IGNORECASE)
 _SEARCH_RE = re.compile(r'(?:search for|look up|google|find out)[:\s]+(.+?)(?:[.!?]|$)', re.IGNORECASE)
 
