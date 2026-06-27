@@ -79,6 +79,7 @@ def question_answer_response(
                 "model": model,
                 "answer_type": answer_type,
             },
+            truncate=False,
         )
 
         #
