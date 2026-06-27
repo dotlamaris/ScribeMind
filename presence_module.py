@@ -96,11 +96,13 @@ def flag_transcript_with_simple_regex(
                         )
                         by_type[flag_type].append(content)
 
+        flagged_items = {k: len(v) for k, v in by_type.items()}
+
         logger.log(
             "Regex flagging complete",
             log_data={
                 "flag_count": len(flags),
-                "by_type": {k: len(v) for k, v in by_type.items()},
+                "by_type": flagged_items,
                 "flags": flags,
             },
         )
