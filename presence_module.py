@@ -48,44 +48,61 @@ def flag_transcript_with_simple_regex(segments, user_id=None, flag_pairs_dict=No
     flag_pairs_dict: {flag_name: [trigger_string, ...]}
     Any sentence containing a trigger string produces a flag of that name.
     """
-    if flag_pairs_dict is None:
-        flag_pairs_dict = DEFAULT_FLAG_PAIRS_DICT
-    if not isinstance(segments, list):
-        segments = [segments]
+    logger = ExecutionLogger()
 
-    compiled = {
-        flag_type: re.compile(
-            r'[^.!?]*(?:' + '|'.join(re.escape(t) for t in triggers) + r')[^.!?]*',
-            re.IGNORECASE,
-        )
-        for flag_type, triggers in flag_pairs_dict.items()
-    }
+    try:
+        if flag_pairs_dict is None:
+            flag_pairs_dict = DEFAULT_FLAG_PAIRS_DICT
+        if not isinstance(segments, list):
+            segments = [segments]
 
-    flags = []
-    by_type = {flag_type: [] for flag_type in flag_pairs_dict}
+        logger.log("Starting regex flagging", log_data={
+            "segment_count": len(segments),
+            "flag_types": list(flag_pairs_dict.keys()),
+            "user_id": user_id,
+        })
 
-    for segment in segments:
-        seg_no = segment.get("segment_no")
-        text = segment.get("transcript", "")
-        for flag_type, pattern in compiled.items():
-            for match in pattern.findall(text):
-                content = match.strip()
-                if content:
-                    flags.append({"flag_type": flag_type, "content": content, "context": text, "segment_no": seg_no, "tags": []})
-                    by_type[flag_type].append(content)
+        compiled = {
+            flag_type: re.compile(
+                r'[^.!?]*(?:' + '|'.join(re.escape(t) for t in triggers) + r')[^.!?]*',
+                re.IGNORECASE,
+            )
+            for flag_type, triggers in flag_pairs_dict.items()
+        }
 
-    return {
-        "metadata": {
-            "flags": flags,
-            "questions":     by_type.get("question", []),
-            "special_notes": by_type.get("special_note", []),
-            "search_queries": by_type.get("search", []),
-            "success": True,
+        flags = []
+        by_type = {flag_type: [] for flag_type in flag_pairs_dict}
+
+        for segment in segments:
+            seg_no = segment.get("segment_no")
+            text = segment.get("transcript", "")
+            for flag_type, pattern in compiled.items():
+                for match in pattern.findall(text):
+                    content = match.strip()
+                    if content:
+                        flags.append({"flag_type": flag_type, "content": content, "context": text, "segment_no": seg_no, "tags": []})
+                        by_type[flag_type].append(content)
+
+        logger.log("Regex flagging complete", log_data={
             "flag_count": len(flags),
-        },
-        "segments": segments,
-        "api_response": None,
-    }
+            "by_type": {k: len(v) for k, v in by_type.items()},
+        })
+
+        return {
+            "metadata": {
+                "flags": flags,
+                "questions":     by_type.get("question", []),
+                "special_notes": by_type.get("special_note", []),
+                "search_queries": by_type.get("search", []),
+                "success": True,
+                "flag_count": len(flags),
+            },
+            "segments": segments,
+            "api_response": None,
+        }
+
+    finally:
+        logger.commit()
 
 
 def question_answer_response(
@@ -235,7 +252,7 @@ def analyze_transcript(transcript_text, user_id, segment_no, answer_type):
 
     flag_result = None
     try:
-        flag_result = flag_transcript_with_llm(segments=segments, user_id=user_id)
+        flag_result = flag_transcript_with_simple_regex(segments=segments, user_id=user_id)
         logger.log("Flagging complete", log_data={
             "flags_found": flag_result.get("metadata", {}).get("success", False) if flag_result else False
         })
