@@ -299,15 +299,22 @@ def answer_transcript_questions(flag_result, user_id, answer_type):
     """Build context from recent transcripts and run Q&A on flagged questions. Returns question_answers dict."""
     logger = ExecutionLogger()
     try:
+        questions = flag_result.get("metadata", {}).get("questions", []) if flag_result else []
+
+        if not questions:
+            logger.log("No questions flagged, skipping Q&A")
+            return None
 
         recent_transcripts = get_recent_transcripts(user_id)
         context_parts = [
             f"[Segment {t.get('segment_no', '?')}] {t.get('transcript', '')}"
             for t in recent_transcripts
         ]
-        combined_context = "\n\n".join(context_parts)
+        questions_text = "\n".join(f"{i+1}. {q}" for i, q in enumerate(questions))
+        combined_context = "\n\n".join(context_parts) + f"\n\nANSWER THESE QUESTIONS:\n{questions_text}"
 
         logger.log("Q&A context prepared", log_data={
+            "questions": questions,
             "recent_segments": len(recent_transcripts),
             "context_chars": len(combined_context),
         })
