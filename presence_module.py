@@ -35,47 +35,51 @@ def get_recent_transcripts(
     return filtered[-limit:]
 
 
-_QUESTION_RE = re.compile(r'[^.!?]*(?:\?|question)[^.!?]*', re.IGNORECASE)
-_SPECIAL_NOTE_RE = re.compile(r'(?:special note|make a note|note this down|note that)[:\s]+(.+?)(?:[.!?]|$)', re.IGNORECASE)
-_SEARCH_RE = re.compile(r'(?:search for|look up|google|find out)[:\s]+(.+?)(?:[.!?]|$)', re.IGNORECASE)
+DEFAULT_FLAG_PAIRS_DICT = {
+    "question":     ["?", "question"],
+    "special_note": ["special note", "make a note", "note this down", "note that"],
+    "search":       ["search for", "look up", "google", "find out"],
+}
 
 
-def flag_transcript_with_simple_regex(segments, user_id=None, **kwargs):
-    """Regex-based transcript flagging. Drop-in replacement for flag_transcript_with_llm."""
+def flag_transcript_with_simple_regex(segments, user_id=None, flag_pairs_dict=None, **kwargs):
+    """Regex-based transcript flagging. Drop-in replacement for flag_transcript_with_llm.
+
+    flag_pairs_dict: {flag_name: [trigger_string, ...]}
+    Any sentence containing a trigger string produces a flag of that name.
+    """
+    if flag_pairs_dict is None:
+        flag_pairs_dict = DEFAULT_FLAG_PAIRS_DICT
     if not isinstance(segments, list):
         segments = [segments]
 
+    compiled = {
+        flag_type: re.compile(
+            r'[^.!?]*(?:' + '|'.join(re.escape(t) for t in triggers) + r')[^.!?]*',
+            re.IGNORECASE,
+        )
+        for flag_type, triggers in flag_pairs_dict.items()
+    }
+
     flags = []
-    questions = []
-    special_notes = []
-    search_queries = []
+    by_type = {flag_type: [] for flag_type in flag_pairs_dict}
 
     for segment in segments:
         seg_no = segment.get("segment_no")
         text = segment.get("transcript", "")
-
-        for match in _QUESTION_RE.findall(text):
-            content = match.strip()
-            if content:
-                flags.append({"flag_type": "question", "content": content, "context": text, "segment_no": seg_no, "tags": []})
-                questions.append(content)
-
-        for match in _SPECIAL_NOTE_RE.finditer(text):
-            content = match.group(1).strip()
-            flags.append({"flag_type": "special_note", "content": content, "context": text, "segment_no": seg_no, "tags": []})
-            special_notes.append(content)
-
-        for match in _SEARCH_RE.finditer(text):
-            content = match.group(1).strip()
-            flags.append({"flag_type": "search", "content": content, "context": text, "segment_no": seg_no, "tags": []})
-            search_queries.append(content)
+        for flag_type, pattern in compiled.items():
+            for match in pattern.findall(text):
+                content = match.strip()
+                if content:
+                    flags.append({"flag_type": flag_type, "content": content, "context": text, "segment_no": seg_no, "tags": []})
+                    by_type[flag_type].append(content)
 
     return {
         "metadata": {
             "flags": flags,
-            "questions": questions,
-            "special_notes": special_notes,
-            "search_queries": search_queries,
+            "questions":     by_type.get("question", []),
+            "special_notes": by_type.get("special_note", []),
+            "search_queries": by_type.get("search", []),
             "success": True,
             "flag_count": len(flags),
         },
