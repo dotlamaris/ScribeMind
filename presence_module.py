@@ -36,13 +36,15 @@ def get_recent_transcripts(
 
 
 DEFAULT_FLAG_PAIRS_DICT = {
-    "question":     ["?", "question"],
+    "question": ["?", "question"],
     "special_note": ["special note", "make a note", "note this down", "note that"],
-    "search":       ["search for", "look up", "google", "find out"],
+    "search": ["search for", "look up", "google", "find out"],
 }
 
 
-def flag_transcript_with_simple_regex(segments, user_id=None, flag_pairs_dict=None, **kwargs):
+def flag_transcript_with_simple_regex(
+    segments, user_id=None, flag_pairs_dict=None, **kwargs
+):
     """Regex-based transcript flagging. Drop-in replacement for flag_transcript_with_llm.
 
     flag_pairs_dict: {flag_name: [trigger_string, ...]}
@@ -56,15 +58,18 @@ def flag_transcript_with_simple_regex(segments, user_id=None, flag_pairs_dict=No
         if not isinstance(segments, list):
             segments = [segments]
 
-        logger.log("Starting regex flagging", log_data={
-            "segment_count": len(segments),
-            "flag_types": list(flag_pairs_dict.keys()),
-            "user_id": user_id,
-        })
+        logger.log(
+            "Starting regex flagging",
+            log_data={
+                "segment_count": len(segments),
+                "flag_types": list(flag_pairs_dict.keys()),
+                "user_id": user_id,
+            },
+        )
 
         compiled = {
             flag_type: re.compile(
-                r'[^.!?]*(?:' + '|'.join(re.escape(t) for t in triggers) + r')[^.!?]*',
+                r"[^.!?]*(?:" + "|".join(re.escape(t) for t in triggers) + r")[^.!?]*",
                 re.IGNORECASE,
             )
             for flag_type, triggers in flag_pairs_dict.items()
@@ -80,18 +85,30 @@ def flag_transcript_with_simple_regex(segments, user_id=None, flag_pairs_dict=No
                 for match in pattern.findall(text):
                     content = match.strip()
                     if content:
-                        flags.append({"flag_type": flag_type, "content": content, "context": text, "segment_no": seg_no, "tags": []})
+                        flags.append(
+                            {
+                                "flag_type": flag_type,
+                                "content": content,
+                                "context": text,
+                                "segment_no": seg_no,
+                                "tags": [],
+                            }
+                        )
                         by_type[flag_type].append(content)
 
-        logger.log("Regex flagging complete", log_data={
-            "flag_count": len(flags),
-            "by_type": {k: len(v) for k, v in by_type.items()},
-        })
+        logger.log(
+            "Regex flagging complete",
+            log_data={
+                "flag_count": len(flags),
+                "by_type": {k: len(v) for k, v in by_type.items()},
+                "flags": flags,
+            },
+        )
 
         return {
             "metadata": {
                 "flags": flags,
-                "questions":     by_type.get("question", []),
+                "questions": by_type.get("question", []),
                 "special_notes": by_type.get("special_note", []),
                 "search_queries": by_type.get("search", []),
                 "success": True,
@@ -222,15 +239,22 @@ def transcribe_audio_segment(audio_file, user_id, segment_no):
         )
 
         if not transcription_result.get("success"):
-            logger.log("Transcription failed", log_type="ERROR", log_data=transcription_result)
-            raise RuntimeError(transcription_result.get("error", "Transcription failed"))
+            logger.log(
+                "Transcription failed", log_type="ERROR", log_data=transcription_result
+            )
+            raise RuntimeError(
+                transcription_result.get("error", "Transcription failed")
+            )
 
         transcript_text = transcription_result.get("text", "")
-        logger.log("Transcription successful", log_data={
-            "segment_no": segment_no,
-            "transcript_length": len(transcript_text),
-            "transcript": transcript_text,
-        })
+        logger.log(
+            "Transcription successful",
+            log_data={
+                "segment_no": segment_no,
+                "transcript_length": len(transcript_text),
+                "transcript": transcript_text,
+            },
+        )
 
         _store_transcript(user_id, int(segment_no), transcript_text)
 
@@ -252,10 +276,17 @@ def analyze_transcript(transcript_text, user_id, segment_no, answer_type):
 
     flag_result = None
     try:
-        flag_result = flag_transcript_with_simple_regex(segments=segments, user_id=user_id)
-        logger.log("Flagging complete", log_data={
-            "flags_found": flag_result.get("metadata", {}).get("success", False) if flag_result else False
-        })
+        flag_result = flag_transcript_with_simple_regex(
+            segments=segments, user_id=user_id
+        )
+        logger.log(
+            "Flagging complete",
+            log_data={
+                "flags_found": flag_result.get("metadata", {}).get("success", False)
+                if flag_result
+                else False
+            },
+        )
     except Exception as e:
         logger.log("Flagging failed (non-fatal)", log_type="WARNING", log_data=str(e))
         flag_result = {"error": str(e)}
@@ -263,39 +294,56 @@ def analyze_transcript(transcript_text, user_id, segment_no, answer_type):
     tag_result = None
     try:
         tag_result = tag_transcript_with_llm(segments=segments, user_id=user_id)
-        logger.log("Tagging complete", log_data={
-            "tags_found": tag_result.get("metadata", {}).get("tag_count", 0) if tag_result else 0
-        })
+        logger.log(
+            "Tagging complete",
+            log_data={
+                "tags_found": tag_result.get("metadata", {}).get("tag_count", 0)
+                if tag_result
+                else 0
+            },
+        )
     except Exception as e:
         logger.log("Tagging failed (non-fatal)", log_type="WARNING", log_data=str(e))
         tag_result = {"error": str(e)}
 
     question_answers = None
     try:
-        questions = flag_result.get("metadata", {}).get("questions", []) if flag_result else []
+        questions = (
+            flag_result.get("metadata", {}).get("questions", []) if flag_result else []
+        )
         if questions:
-            recent_transcripts = get_recent_transcripts(user_id, limit=3, exclude_segment=int(segment_no))
+            recent_transcripts = get_recent_transcripts(
+                user_id, limit=3, exclude_segment=int(segment_no)
+            )
             context_parts = [
                 f"[Segment {t.get('segment_no', '?')}] {t.get('transcript', '')}"
                 for t in reversed(recent_transcripts)
             ]
             context_parts.append(f"[Segment {segment_no}] {transcript_text}")
             combined_context = "\n\n".join(context_parts)
-            logger.log("Q&A context prepared", log_data={
-                "questions": questions,
-                "recent_segments": len(recent_transcripts),
-                "context_chars": len(combined_context),
-            })
+            logger.log(
+                "Q&A context prepared",
+                log_data={
+                    "questions": questions,
+                    "recent_segments": len(recent_transcripts),
+                    "context_chars": len(combined_context),
+                },
+            )
             question_answers = question_answer_response(
                 questions=questions,
                 context=combined_context,
                 answer_type=answer_type,
             )
-            logger.log("Question answering complete", log_data={"success": question_answers.get("success", False)})
+            logger.log(
+                "Question answering complete",
+                log_data={"success": question_answers.get("success", False)},
+            )
         else:
             logger.log("No questions flagged, skipping Q&A")
     except Exception as e:
-        logger.log("Question answering failed (non-fatal)", log_type="WARNING", log_data=str(e))
+        logger.log(
+            "Question answering failed (non-fatal)", log_type="WARNING", log_data=str(e)
+        )
         question_answers = {"error": str(e)}
 
     logger.commit()
@@ -308,7 +356,9 @@ def analyze_transcript(transcript_text, user_id, segment_no, answer_type):
 
 def process_audio_segment(audio_file, user_id, segment_no, answer_type):
     """Transcribe audio and run the full analysis pipeline. Returns a result dict."""
-    transcript_text, file_size = transcribe_audio_segment(audio_file, user_id, segment_no)
+    transcript_text, file_size = transcribe_audio_segment(
+        audio_file, user_id, segment_no
+    )
     analysis = analyze_transcript(transcript_text, user_id, segment_no, answer_type)
     return {"size_bytes": file_size, "transcript": transcript_text, **analysis}
 
@@ -341,25 +391,34 @@ def register_presence_routes(app):
             if not session_number:
                 return jsonify({"error": "sessionNumber is required"}), 400
             if answer_type not in ["concise", "detailed", "poetic"]:
-                return jsonify({"error": "Invalid answer_type. Must be 'concise', 'detailed', or 'poetic'."}), 400
+                return jsonify(
+                    {
+                        "error": "Invalid answer_type. Must be 'concise', 'detailed', or 'poetic'."
+                    }
+                ), 400
 
-            logger.log("Audio upload received", log_data={
-                "user_id": user_id,
-                "segment_no": segment_no,
-                "filename": audio_file.filename,
-                "answer_type": answer_type,
-            })
+            logger.log(
+                "Audio upload received",
+                log_data={
+                    "user_id": user_id,
+                    "segment_no": segment_no,
+                    "filename": audio_file.filename,
+                    "answer_type": answer_type,
+                },
+            )
 
             result = process_audio_segment(audio_file, user_id, segment_no, answer_type)
 
-            return jsonify({
-                "status": "success",
-                "message": "Audio uploaded and transcribed successfully",
-                "user_id": user_id,
-                "segment_no": segment_no,
-                **result,
-                "ready": True,
-            })
+            return jsonify(
+                {
+                    "status": "success",
+                    "message": "Audio uploaded and transcribed successfully",
+                    "user_id": user_id,
+                    "segment_no": segment_no,
+                    **result,
+                    "ready": True,
+                }
+            )
 
         except Exception as e:
             logger.log("Audio upload failed", log_type="ERROR", log_data=str(e))
