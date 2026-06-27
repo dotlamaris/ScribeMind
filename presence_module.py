@@ -2,7 +2,6 @@ import os
 import re
 import tempfile
 import datetime
-from collections import defaultdict
 from flask import request, jsonify
 from logger import ExecutionLogger
 from groq_client import GroqClient
@@ -11,28 +10,23 @@ from nanobot_template import run_agent
 
 # In-memory transcript history keyed by user_id
 # Each entry: {"segment_no": int, "transcript": str}
-_transcript_history = defaultdict(list)
+_transcript_history = {}
 _MAX_HISTORY = 20  # per user
 
 
 def _store_transcript(user_id: str, segment_no: int, transcript: str):
     """Append a transcript to in-memory history for this user."""
-    history = _transcript_history[user_id]
-    history.append({"segment_no": segment_no, "transcript": transcript})
-    if len(history) > _MAX_HISTORY:
-        history.pop(0)
+    if user_id not in _transcript_history:
+        _transcript_history[user_id] = []
+    _transcript_history[user_id].append({"segment_no": segment_no, "transcript": transcript})
+    if len(_transcript_history[user_id]) > _MAX_HISTORY:
+        _transcript_history[user_id].pop(0)
 
 
-def get_recent_transcripts(
-    user_id: str, limit: int = 3, exclude_segment: int = None
-) -> list:
-    """
-    Return the last N transcripts for a user from in-memory history,
-    optionally excluding a specific segment number.
-    """
+def get_recent_transcripts(user_id: str, limit: int = 5) -> list:
+    """Return the last N transcripts for a user, oldest first."""
     history = _transcript_history.get(user_id, [])
-    filtered = [t for t in history if t.get("segment_no") != exclude_segment]
-    return filtered[-limit:]
+    return history[-limit:]
 
 
 DEFAULT_FLAG_PAIRS_DICT = {
@@ -303,7 +297,7 @@ def tag_transcript(segments, user_id):
         logger.commit()
 
 
-def answer_transcript_questions(flag_result, transcript_text, user_id, segment_no, answer_type):
+def answer_transcript_questions(flag_result, user_id, answer_type):
     """Build context from recent transcripts and run Q&A on flagged questions. Returns question_answers dict."""
     logger = ExecutionLogger()
     try:
@@ -313,14 +307,11 @@ def answer_transcript_questions(flag_result, transcript_text, user_id, segment_n
             logger.log("No questions flagged, skipping Q&A")
             return None
 
-        recent_transcripts = get_recent_transcripts(
-            user_id, limit=3, exclude_segment=int(segment_no)
-        )
+        recent_transcripts = get_recent_transcripts(user_id, limit=5)
         context_parts = [
             f"[Segment {t.get('segment_no', '?')}] {t.get('transcript', '')}"
-            for t in reversed(recent_transcripts)
+            for t in recent_transcripts
         ]
-        context_parts.append(f"[Segment {segment_no}] {transcript_text}")
         combined_context = "\n\n".join(context_parts)
 
         logger.log("Q&A context prepared", log_data={
@@ -349,7 +340,7 @@ def analyze_transcript(transcript_text, user_id, segment_no, answer_type):
     segments = [{"segment_no": int(segment_no), "transcript": transcript_text}]
     flag_result = flag_transcript(segments, user_id)
     tag_result = tag_transcript(segments, user_id)
-    question_answers = answer_transcript_questions(flag_result, transcript_text, user_id, segment_no, answer_type)
+    question_answers = answer_transcript_questions(flag_result, user_id, answer_type)
     return {
         "flags": flag_result,
         "tags": tag_result,
