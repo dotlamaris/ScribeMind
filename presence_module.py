@@ -1,4 +1,5 @@
 import os
+import re
 import tempfile
 import datetime
 from collections import defaultdict
@@ -32,6 +33,55 @@ def get_recent_transcripts(
     history = _transcript_history.get(user_id, [])
     filtered = [t for t in history if t.get("segment_no") != exclude_segment]
     return filtered[-limit:]
+
+
+_QUESTION_RE = re.compile(r'[^.!?]*\?')
+_SPECIAL_NOTE_RE = re.compile(r'(?:special note|make a note|note this down|note that)[:\s]+(.+?)(?:[.!?]|$)', re.IGNORECASE)
+_SEARCH_RE = re.compile(r'(?:search for|look up|google|find out)[:\s]+(.+?)(?:[.!?]|$)', re.IGNORECASE)
+
+
+def flag_transcript_with_simple_regex(segments, user_id=None, **kwargs):
+    """Regex-based transcript flagging. Drop-in replacement for flag_transcript_with_llm."""
+    if not isinstance(segments, list):
+        segments = [segments]
+
+    flags = []
+    questions = []
+    special_notes = []
+    search_queries = []
+
+    for segment in segments:
+        seg_no = segment.get("segment_no")
+        text = segment.get("transcript", "")
+
+        for match in _QUESTION_RE.findall(text):
+            content = match.strip()
+            if content:
+                flags.append({"flag_type": "question", "content": content, "context": text, "segment_no": seg_no, "tags": []})
+                questions.append(content)
+
+        for match in _SPECIAL_NOTE_RE.finditer(text):
+            content = match.group(1).strip()
+            flags.append({"flag_type": "special_note", "content": content, "context": text, "segment_no": seg_no, "tags": []})
+            special_notes.append(content)
+
+        for match in _SEARCH_RE.finditer(text):
+            content = match.group(1).strip()
+            flags.append({"flag_type": "search", "content": content, "context": text, "segment_no": seg_no, "tags": []})
+            search_queries.append(content)
+
+    return {
+        "metadata": {
+            "flags": flags,
+            "questions": questions,
+            "special_notes": special_notes,
+            "search_queries": search_queries,
+            "success": True,
+            "flag_count": len(flags),
+        },
+        "segments": segments,
+        "api_response": None,
+    }
 
 
 def question_answer_response(
