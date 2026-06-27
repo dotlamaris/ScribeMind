@@ -271,84 +271,85 @@ def transcribe_audio_segment(audio_file, user_id, segment_no):
         logger.commit()
 
 
-def analyze_transcript(transcript_text, user_id, segment_no, answer_type):
-    """Flag, tag, and answer questions from a transcript. Returns a result dict."""
+def flag_transcript(segments, user_id):
+    """Run regex-based flagging on segments. Returns flag_result dict."""
     logger = ExecutionLogger()
-    segments = [{"segment_no": int(segment_no), "transcript": transcript_text}]
-
-    flag_result = None
     try:
-        flag_result = flag_transcript_with_simple_regex(
-            segments=segments, user_id=user_id
-        )
-        logger.log(
-            "Flagging complete",
-            log_data={
-                "flags_found": flag_result.get("metadata", {}).get("success", False)
-                if flag_result
-                else False
-            },
-        )
+        result = flag_transcript_with_simple_regex(segments=segments, user_id=user_id)
+        logger.log("Flagging complete", log_data={
+            "flag_count": result.get("metadata", {}).get("flag_count", 0),
+        })
+        return result
     except Exception as e:
         logger.log("Flagging failed (non-fatal)", log_type="WARNING", log_data=str(e))
-        flag_result = {"error": str(e)}
+        return {"error": str(e)}
+    finally:
+        logger.commit()
 
-    tag_result = None
+
+def tag_transcript(segments, user_id):
+    """Run LLM-based tagging on segments. Returns tag_result dict."""
+    logger = ExecutionLogger()
     try:
-        tag_result = tag_transcript_with_llm(segments=segments, user_id=user_id)
-        logger.log(
-            "Tagging complete",
-            log_data={
-                "tags_found": tag_result.get("metadata", {}).get("tag_count", 0)
-                if tag_result
-                else 0
-            },
-        )
+        result = tag_transcript_with_llm(segments=segments, user_id=user_id)
+        logger.log("Tagging complete", log_data={
+            "tag_count": result.get("metadata", {}).get("tag_count", 0),
+        })
+        return result
     except Exception as e:
         logger.log("Tagging failed (non-fatal)", log_type="WARNING", log_data=str(e))
-        tag_result = {"error": str(e)}
+        return {"error": str(e)}
+    finally:
+        logger.commit()
 
-    question_answers = None
+
+def answer_transcript_questions(flag_result, transcript_text, user_id, segment_no, answer_type):
+    """Build context from recent transcripts and run Q&A on flagged questions. Returns question_answers dict."""
+    logger = ExecutionLogger()
     try:
-        questions = (
-            flag_result.get("metadata", {}).get("questions", []) if flag_result else []
-        )
-        if questions:
-            recent_transcripts = get_recent_transcripts(
-                user_id, limit=3, exclude_segment=int(segment_no)
-            )
-            context_parts = [
-                f"[Segment {t.get('segment_no', '?')}] {t.get('transcript', '')}"
-                for t in reversed(recent_transcripts)
-            ]
-            context_parts.append(f"[Segment {segment_no}] {transcript_text}")
-            combined_context = "\n\n".join(context_parts)
-            logger.log(
-                "Q&A context prepared",
-                log_data={
-                    "questions": questions,
-                    "recent_segments": len(recent_transcripts),
-                    "context_chars": len(combined_context),
-                },
-            )
-            question_answers = question_answer_response(
-                questions=questions,
-                context=combined_context,
-                answer_type=answer_type,
-            )
-            logger.log(
-                "Question answering complete",
-                log_data={"success": question_answers.get("success", False)},
-            )
-        else:
-            logger.log("No questions flagged, skipping Q&A")
-    except Exception as e:
-        logger.log(
-            "Question answering failed (non-fatal)", log_type="WARNING", log_data=str(e)
-        )
-        question_answers = {"error": str(e)}
+        questions = flag_result.get("metadata", {}).get("questions", []) if flag_result else []
 
-    logger.commit()
+        if not questions:
+            logger.log("No questions flagged, skipping Q&A")
+            return None
+
+        recent_transcripts = get_recent_transcripts(
+            user_id, limit=3, exclude_segment=int(segment_no)
+        )
+        context_parts = [
+            f"[Segment {t.get('segment_no', '?')}] {t.get('transcript', '')}"
+            for t in reversed(recent_transcripts)
+        ]
+        context_parts.append(f"[Segment {segment_no}] {transcript_text}")
+        combined_context = "\n\n".join(context_parts)
+
+        logger.log("Q&A context prepared", log_data={
+            "questions": questions,
+            "recent_segments": len(recent_transcripts),
+            "context_chars": len(combined_context),
+        })
+
+        result = question_answer_response(
+            questions=questions,
+            context=combined_context,
+            answer_type=answer_type,
+        )
+        logger.log("Question answering complete", log_data={"success": result.get("success", False)})
+        return result
+
+    except Exception as e:
+        logger.log("Question answering failed (non-fatal)", log_type="WARNING", log_data=str(e))
+        return {"error": str(e)}
+    finally:
+        logger.commit()
+
+
+def analyze_transcript(transcript_text, user_id, segment_no, answer_type):
+    """Flag, tag, and answer questions from a transcript. Returns a result dict."""
+    segments = [{"segment_no": int(segment_no), "transcript": transcript_text}]
+    flag_result = flag_transcript(segments, user_id)
+    tag_result = tag_transcript(segments, user_id)
+    question_answers = answer_transcript_questions(flag_result, transcript_text, user_id, segment_no, answer_type)
     return {
         "flags": flag_result,
         "tags": tag_result,
