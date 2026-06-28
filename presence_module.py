@@ -18,7 +18,9 @@ def _store_transcript(user_id: str, segment_no: int, transcript: str):
     """Append a transcript to in-memory history for this user."""
     if user_id not in _transcript_history:
         _transcript_history[user_id] = []
-    _transcript_history[user_id].append({"segment_no": segment_no, "transcript": transcript})
+    _transcript_history[user_id].append(
+        {"segment_no": segment_no, "transcript": transcript}
+    )
     if len(_transcript_history[user_id]) > _MAX_HISTORY:
         _transcript_history[user_id].pop(0)
 
@@ -142,11 +144,8 @@ def question_answer_response(
         if answer_type == "hermes":
             system_prompt += " Respond in a reddit post top comment poetic style with philosophical depth, conceptual brevity, and absolute clarity. 40-80 words per answer max."
 
-
         if context:
-            user_message = (
-                f"CONTEXT:\n{context}"
-            )
+            user_message = f"CONTEXT:\n{context}"
         else:
             user_message = " "
 
@@ -268,9 +267,12 @@ def flag_transcript(segments, user_id):
     logger = ExecutionLogger()
     try:
         result = flag_transcript_with_simple_regex(segments=segments, user_id=user_id)
-        logger.log("Flagging complete", log_data={
-            "flag_count": result.get("metadata", {}).get("flag_count", 0),
-        })
+        logger.log(
+            "Flagging complete",
+            log_data={
+                "flag_count": result.get("metadata", {}).get("flag_count", 0),
+            },
+        )
         return result
     except Exception as e:
         logger.log("Flagging failed (non-fatal)", log_type="WARNING", log_data=str(e))
@@ -284,9 +286,12 @@ def tag_transcript(segments, user_id):
     logger = ExecutionLogger()
     try:
         result = tag_transcript_with_llm(segments=segments, user_id=user_id)
-        logger.log("Tagging complete", log_data={
-            "tag_count": result.get("metadata", {}).get("tag_count", 0),
-        })
+        logger.log(
+            "Tagging complete",
+            log_data={
+                "tag_count": result.get("metadata", {}).get("tag_count", 0),
+            },
+        )
         return result
     except Exception as e:
         logger.log("Tagging failed (non-fatal)", log_type="WARNING", log_data=str(e))
@@ -299,7 +304,9 @@ def answer_transcript_questions(flag_result, user_id, answer_type):
     """Build context from recent transcripts and run Q&A on flagged questions. Returns question_answers dict."""
     logger = ExecutionLogger()
     try:
-        questions = flag_result.get("metadata", {}).get("questions", []) if flag_result else []
+        questions = (
+            flag_result.get("metadata", {}).get("questions", []) if flag_result else []
+        )
 
         if not questions:
             logger.log("No questions flagged, skipping Q&A")
@@ -310,24 +317,32 @@ def answer_transcript_questions(flag_result, user_id, answer_type):
             f"[Segment {t.get('segment_no', '?')}] {t.get('transcript', '')}"
             for t in recent_transcripts
         ]
-        questions_text = "\n".join(f"{i+1}. {q}" for i, q in enumerate(questions))
-        combined_context = "\n\n".join(context_parts) + f"\n\nANSWER THESE QUESTIONS:\n{questions_text}"
 
-        logger.log("Q&A context prepared", log_data={
-            "questions": questions,
-            "recent_segments": len(recent_transcripts),
-            "context_chars": len(combined_context),
-        })
+        combined_context = "\n\n".join(context_parts)
+
+        logger.log(
+            "Q&A context prepared",
+            log_data={
+                "questions": questions,
+                "recent_segments": len(recent_transcripts),
+                "context_chars": len(combined_context),
+            },
+        )
 
         result = question_answer_response(
             context=combined_context,
             answer_type=answer_type,
         )
-        logger.log("Question answering complete", log_data={"success": result.get("success", False)})
+        logger.log(
+            "Question answering complete",
+            log_data={"success": result.get("success", False)},
+        )
         return result
 
     except Exception as e:
-        logger.log("Question answering failed (non-fatal)", log_type="WARNING", log_data=str(e))
+        logger.log(
+            "Question answering failed (non-fatal)", log_type="WARNING", log_data=str(e)
+        )
         return {"error": str(e)}
     finally:
         logger.commit()
