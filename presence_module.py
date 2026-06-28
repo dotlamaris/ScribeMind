@@ -300,67 +300,43 @@ def tag_transcript(segments, user_id):
         logger.commit()
 
 
-def answer_transcript_questions(flag_result, user_id, answer_type):
-    """Build context from recent transcripts and run Q&A on flagged questions. Returns question_answers dict."""
+def analyze_transcript(transcript_text, user_id, segment_no, answer_type):
+    """Flag, tag, and run nanobot response on every transcript. Returns a result dict."""
     logger = ExecutionLogger()
+    segments = [{"segment_no": int(segment_no), "transcript": transcript_text}]
+    flag_result = flag_transcript(segments, user_id)
+    tag_result = tag_transcript(segments, user_id)
+
     try:
-        questions = (
-            flag_result.get("metadata", {}).get("questions", []) if flag_result else []
-        )
-
-        if not questions:
-            logger.log(
-                "No questions flagged, skipping Q&A",
-                log_data={"flag result": flag_result},
-            )
-            return None
-
         recent_transcripts = get_recent_transcripts(user_id)
         context_parts = [
             f"[Segment {t.get('segment_no', '?')}] {t.get('transcript', '')}"
             for t in recent_transcripts
         ]
-
         combined_context = "\n\n".join(context_parts)
 
         logger.log(
-            "Q&A context prepared",
+            "Nanobot context prepared",
             log_data={
-                "questions": questions,
                 "recent_segments": len(recent_transcripts),
                 "context_chars": len(combined_context),
             },
         )
 
-        result = question_answer_response(
+        nanobot_response = question_answer_response(
             context=combined_context,
             answer_type=answer_type,
         )
-        logger.log(
-            "Question answering complete",
-            log_data={"success": result.get("success", False)},
-        )
-        return result
-
     except Exception as e:
-        logger.log(
-            "Question answering failed (non-fatal)", log_type="WARNING", log_data=str(e)
-        )
-        return {"error": str(e)}
+        logger.log("Nanobot response failed (non-fatal)", log_type="WARNING", log_data=str(e))
+        nanobot_response = {"error": str(e)}
     finally:
         logger.commit()
 
-
-def analyze_transcript(transcript_text, user_id, segment_no, answer_type):
-    """Flag, tag, and answer questions from a transcript. Returns a result dict."""
-    segments = [{"segment_no": int(segment_no), "transcript": transcript_text}]
-    flag_result = flag_transcript(segments, user_id)
-    tag_result = tag_transcript(segments, user_id)
-    question_answers = answer_transcript_questions(flag_result, user_id, answer_type)
     return {
         "flags": flag_result,
         "tags": tag_result,
-        "question_answers": question_answers,
+        "question_answers": nanobot_response,
     }
 
 
