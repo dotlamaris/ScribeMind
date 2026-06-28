@@ -309,7 +309,10 @@ def answer_transcript_questions(flag_result, user_id, answer_type):
         )
 
         if not questions:
-            logger.log("No questions flagged, skipping Q&A")
+            logger.log(
+                "No questions flagged, skipping Q&A",
+                log_data={"flag result": flag_result},
+            )
             return None
 
         recent_transcripts = get_recent_transcripts(user_id)
