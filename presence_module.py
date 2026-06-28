@@ -462,6 +462,9 @@ def register_presence_routes(app):
 
             result = process_audio_segment(audio_file, user_id, segment_no, answer_type)
 
+            qa = result.get("question_answers") or {}
+            audio_update = qa.get("answer") if qa.get("success") and qa.get("answer") else None
+
             return jsonify(
                 {
                     "status": "success",
@@ -469,6 +472,7 @@ def register_presence_routes(app):
                     "user_id": user_id,
                     "segment_no": segment_no,
                     **result,
+                    "audio_update": audio_update,
                     "ready": True,
                 }
             )
