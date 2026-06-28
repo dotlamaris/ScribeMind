@@ -189,12 +189,10 @@ def question_answer_response(
         if answer_type == "hermes":
             system_prompt += " Respond in a reddit post top comment poetic style with philosophical depth, conceptual brevity, and absolute clarity. 40-80 words per answer max."
 
-        if context:
-            user_message = f"CONTEXT:\n{context}"
-        else:
-            user_message = " "
+        user_message = f"CONTEXT:\n{context}"
 
-        full_prompt = f"{system_prompt}\n{user_message}"
+        # full_prompt = f"{system_prompt}\n{user_message}"
+        full_prompt = f"{user_message}"
 
         # log it
         logger.log(
@@ -373,7 +371,9 @@ def analyze_transcript(transcript_text, user_id, segment_no, answer_type):
             answer_type=answer_type,
         )
     except Exception as e:
-        logger.log("Nanobot response failed (non-fatal)", log_type="WARNING", log_data=str(e))
+        logger.log(
+            "Nanobot response failed (non-fatal)", log_type="WARNING", log_data=str(e)
+        )
         nanobot_response = {"error": str(e)}
     finally:
         logger.commit()
@@ -417,7 +417,9 @@ def register_presence_routes(app):
     def end_session(user_id):
         """Clear all session data for a user."""
         clear_session(user_id)
-        return jsonify({"status": "success", "message": f"Session cleared for {user_id}"})
+        return jsonify(
+            {"status": "success", "message": f"Session cleared for {user_id}"}
+        )
 
     @app.route("/api/upload/audio", methods=["POST"])
     def upload_audio():
@@ -463,7 +465,9 @@ def register_presence_routes(app):
             result = process_audio_segment(audio_file, user_id, segment_no, answer_type)
 
             qa = result.get("question_answers") or {}
-            audio_update = qa.get("answer") if qa.get("success") and qa.get("answer") else None
+            audio_update = (
+                qa.get("answer") if qa.get("success") and qa.get("answer") else None
+            )
 
             return jsonify(
                 {
