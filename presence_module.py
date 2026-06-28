@@ -8,10 +8,14 @@ from groq_client import GroqClient
 from groq_template import flag_transcript_with_llm, tag_transcript_with_llm
 from nanobot_template import run_agent
 
-# In-memory transcript history keyed by user_id
+# In-memory transcript history keyed by user_id (used for nanobot context)
 # Each entry: {"segment_no": int, "transcript": str}
 _transcript_history = {}
 _MAX_HISTORY = 20  # per user
+
+# In-memory session store keyed by user_id (full segment results, survives until End Session)
+# Each entry: {segment_no, transcript, timestamp, flags, tags, question_answers}
+_session_store = {}
 
 
 def _store_transcript(user_id: str, segment_no: int, transcript: str):
@@ -23,6 +27,47 @@ def _store_transcript(user_id: str, segment_no: int, transcript: str):
     )
     if len(_transcript_history[user_id]) > _MAX_HISTORY:
         _transcript_history[user_id].pop(0)
+
+
+def _store_segment_result(
+    user_id: str,
+    segment_no: int,
+    transcript: str,
+    timestamp: str,
+    flags: dict,
+    tags: dict,
+    question_answers: dict,
+):
+    """Store a full segment result in the session store."""
+    if user_id not in _session_store:
+        _session_store[user_id] = []
+    _session_store[user_id] = [
+        s for s in _session_store[user_id] if s.get("segment_no") != segment_no
+    ]
+    _session_store[user_id].append(
+        {
+            "segment_no": segment_no,
+            "transcript": transcript,
+            "timestamp": timestamp,
+            "flags": flags,
+            "tags": tags,
+            "question_answers": question_answers,
+        }
+    )
+    _session_store[user_id].sort(key=lambda s: s["segment_no"])
+
+
+def get_session_data(user_id: str) -> dict:
+    """Return stored session data for a user."""
+    segments = _session_store.get(user_id, [])
+    max_segment_no = max((s["segment_no"] for s in segments), default=0)
+    return {"segments": segments, "max_segment_no": max_segment_no}
+
+
+def clear_session(user_id: str):
+    """Clear all session data for a user."""
+    _session_store.pop(user_id, None)
+    _transcript_history.pop(user_id, None)
 
 
 def get_recent_transcripts(user_id: str, limit: int = 5) -> list:
@@ -346,11 +391,33 @@ def process_audio_segment(audio_file, user_id, segment_no, answer_type):
         audio_file, user_id, segment_no
     )
     analysis = analyze_transcript(transcript_text, user_id, segment_no, answer_type)
+    timestamp = datetime.datetime.now().strftime("%I:%M:%S %p")
+    _store_segment_result(
+        user_id=user_id,
+        segment_no=int(segment_no),
+        transcript=transcript_text,
+        timestamp=timestamp,
+        flags=analysis.get("flags"),
+        tags=analysis.get("tags"),
+        question_answers=analysis.get("question_answers"),
+    )
     return {"size_bytes": file_size, "transcript": transcript_text, **analysis}
 
 
 def register_presence_routes(app):
     """Register presence-related routes with the Flask app"""
+
+    @app.route("/api/session/<user_id>", methods=["GET"])
+    def get_session(user_id):
+        """Return stored session data for a user."""
+        data = get_session_data(user_id)
+        return jsonify(data)
+
+    @app.route("/api/session/<user_id>/end", methods=["POST"])
+    def end_session(user_id):
+        """Clear all session data for a user."""
+        clear_session(user_id)
+        return jsonify({"status": "success", "message": f"Session cleared for {user_id}"})
 
     @app.route("/api/upload/audio", methods=["POST"])
     def upload_audio():

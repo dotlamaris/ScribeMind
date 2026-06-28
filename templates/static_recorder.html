@@ -398,7 +398,42 @@
         function initializeSession() {
             sessionAnimal = Math.random();
             sessionNumber = Math.random();
-            Logger.log('✅ New session initialized:', { sessionAnimal, sessionNumber });
+            Logger.log('✅ Session identifiers set:', { sessionAnimal, sessionNumber });
+        }
+
+        // Fetch existing session data from server and restore client state
+        async function fetchAndRestoreSession() {
+            if (!userId) return;
+            try {
+                Logger.log('🔄 Fetching session from server for userId:', userId);
+                const response = await fetch(`/api/session/${userId}`);
+                const data = await response.json();
+                const segments = data.segments || [];
+                if (segments.length === 0) {
+                    Logger.log('ℹ️ No existing session data on server');
+                    return;
+                }
+                Logger.log(`✅ Restored ${segments.length} segments from server`);
+                segments.forEach(seg => {
+                    sessionTranscripts.push({
+                        segment: seg.segment_no,
+                        text: seg.transcript,
+                        timestamp: seg.timestamp || '',
+                        flags: seg.flags,
+                        tags: seg.tags,
+                        question_answers: seg.question_answers,
+                    });
+                    if (seg.question_answers && seg.question_answers.answer) {
+                        answersBySegment[seg.segment_no] = seg.question_answers;
+                    }
+                });
+                segmentCounter = data.max_segment_no || 0;
+                updateTranscriptDisplay();
+                updateQuestionsDisplay();
+                Logger.log(`🔄 Session restored. Segment counter set to ${segmentCounter}`);
+            } catch (err) {
+                Logger.warn('⚠️ Failed to restore session from server:', err);
+            }
         }
 
         // Recording references
@@ -838,20 +873,30 @@
         }
 
         // End session
-        function endSession() {
+        async function endSession() {
             if (isRecording) {
                 alert('Please stop recording before ending the session.');
                 return;
             }
-            
-            sessionAnimal = null;
-            sessionNumber = null;
+
+            if (userId) {
+                try {
+                    await fetch(`/api/session/${userId}/end`, { method: 'POST' });
+                    Logger.log('🛑 Server session cleared for userId:', userId);
+                } catch (err) {
+                    Logger.warn('⚠️ Failed to clear server session:', err);
+                }
+            }
+
             segmentCounter = 0;
             sessionTranscripts = [];
+            answersBySegment = {};
             recordingsContainer.innerHTML = '';
+            initializeSession();
             updateSessionDisplay();
             updateTranscriptDisplay();
-            Logger.log('🛑 Session ended');
+            updateQuestionsDisplay();
+            Logger.log('🛑 Session ended and reset');
         }
         
         // Toggle recording
@@ -859,11 +904,6 @@
             if (isRecording) {
                 stopRecording();
             } else {
-                // Initialize session on first recording if not already set
-                if (sessionAnimal === null || sessionNumber === null) {
-                    initializeSession();
-                    updateSessionDisplay();
-                }
                 await startRecording();
             }
         }
@@ -874,15 +914,16 @@
             const endSessionButton = document.getElementById('endSessionButton');
             const topRecordButton = document.getElementById('topRecordButton');
             const topTimerDisplay = document.getElementById('topTimerDisplay');
-            
-            if (sessionAnimal !== null && sessionNumber !== null) {
-                sessionDisplay.textContent = `Active (${(sessionAnimal * 1000).toFixed(0)} / ${(sessionNumber * 1000).toFixed(0)})`;
+
+            if (userId) {
+                const segmentLabel = segmentCounter > 0 ? ` · ${segmentCounter} segment${segmentCounter !== 1 ? 's' : ''}` : '';
+                sessionDisplay.textContent = `Active${segmentLabel}`;
                 sessionDisplay.style.color = '#3fb950';
                 endSessionButton.style.display = 'inline-block';
                 topRecordButton.style.display = 'inline-block';
                 topTimerDisplay.style.display = 'inline-block';
             } else {
-                sessionDisplay.textContent = 'Not started';
+                sessionDisplay.textContent = 'No user_id in URL';
                 sessionDisplay.style.color = '#888888';
                 endSessionButton.style.display = 'none';
                 topRecordButton.style.display = 'none';
@@ -917,25 +958,29 @@
         }
 
         // Initialize the app
-        function init() {
+        async function init() {
             initializeAudioBars();
             updateUI();
-            updateSessionDisplay();
-            
+
             // Display user_id or warning
             const userIdDisplay = document.getElementById('userIdDisplay');
             const userInfo = document.getElementById('userInfo');
-            
+
             if (userId) {
                 userIdDisplay.textContent = userId;
                 userInfo.style.backgroundColor = '#2a2a2a';
                 userInfo.style.color = '#ffffff';
                 Logger.log('✅ SyncMind Recorder initialized with userId:', userId);
+                initializeSession();
+                updateSessionDisplay();
+                await fetchAndRestoreSession();
+                updateSessionDisplay();
             } else {
                 userIdDisplay.textContent = '⚠️ No user_id specified (add ?user_id=your_id to URL)';
                 userInfo.style.backgroundColor = '#2a1a1a';
                 userInfo.style.color = '#ef4444';
                 Logger.warn('⚠️ No user_id provided in URL parameter');
+                updateSessionDisplay();
             }
         }
 
