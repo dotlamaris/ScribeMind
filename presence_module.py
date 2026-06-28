@@ -168,7 +168,6 @@ def flag_transcript_with_simple_regex(
 def question_answer_response(
     context: str = "",
     model: str = "nemotron-3-nano:30b",
-    answer_type: str = "detailed",
 ) -> dict:
     """
     Generate answers to multiple questions in one batch using Groq LLM with optional context.
@@ -178,16 +177,6 @@ def question_answer_response(
 
     try:
         system_prompt = "You are a helpful and accurate assistant. Provide clear, concise answers to user questions."
-        if answer_type == "concise":
-            system_prompt += (
-                " Keep answers brief and to the point. 10-50 words per answer max."
-            )
-        if answer_type == "detailed":
-            system_prompt += " Provide thorough explanations, focusing on insightful brevity. 50-200 words per answer max."
-        if answer_type == "poetic":
-            system_prompt += " Respond in a chinese poetic style with philosophical depth and conceptual brevity. 40-80 words per answer max."
-        if answer_type == "hermes":
-            system_prompt += " Respond in a reddit post top comment poetic style with philosophical depth, conceptual brevity, and absolute clarity. 40-80 words per answer max."
 
         user_message = f"CONTEXT:\n{context}"
 
@@ -343,7 +332,7 @@ def tag_transcript(segments, user_id):
         logger.commit()
 
 
-def analyze_transcript(transcript_text, user_id, segment_no, answer_type):
+def analyze_transcript(transcript_text, user_id, segment_no):
     """Flag, tag, and run nanobot response on every transcript. Returns a result dict."""
     logger = ExecutionLogger()
     segments = [{"segment_no": int(segment_no), "transcript": transcript_text}]
@@ -368,7 +357,6 @@ def analyze_transcript(transcript_text, user_id, segment_no, answer_type):
 
         nanobot_response = question_answer_response(
             context=combined_context,
-            answer_type=answer_type,
         )
     except Exception as e:
         logger.log(
@@ -385,12 +373,12 @@ def analyze_transcript(transcript_text, user_id, segment_no, answer_type):
     }
 
 
-def process_audio_segment(audio_file, user_id, segment_no, answer_type):
+def process_audio_segment(audio_file, user_id, segment_no):
     """Transcribe audio and run the full analysis pipeline. Returns a result dict."""
     transcript_text, file_size = transcribe_audio_segment(
         audio_file, user_id, segment_no
     )
-    analysis = analyze_transcript(transcript_text, user_id, segment_no, answer_type)
+    analysis = analyze_transcript(transcript_text, user_id, segment_no)
     timestamp = datetime.datetime.now().strftime("%I:%M:%S %p")
     _store_segment_result(
         user_id=user_id,
@@ -435,8 +423,6 @@ def register_presence_routes(app):
             segment_no = request.form.get("segment_no")
             session_animal = request.form.get("sessionAnimal")
             session_number = request.form.get("sessionNumber")
-            answer_type = request.form.get("answer_type", "detailed")
-
             if not user_id:
                 return jsonify({"error": "user_id is required"}), 400
             if not segment_no:
@@ -445,12 +431,6 @@ def register_presence_routes(app):
                 return jsonify({"error": "sessionAnimal is required"}), 400
             if not session_number:
                 return jsonify({"error": "sessionNumber is required"}), 400
-            if answer_type not in ["concise", "detailed", "poetic"]:
-                return jsonify(
-                    {
-                        "error": "Invalid answer_type. Must be 'concise', 'detailed', or 'poetic'."
-                    }
-                ), 400
 
             logger.log(
                 "Audio upload received",
@@ -458,11 +438,10 @@ def register_presence_routes(app):
                     "user_id": user_id,
                     "segment_no": segment_no,
                     "filename": audio_file.filename,
-                    "answer_type": answer_type,
                 },
             )
 
-            result = process_audio_segment(audio_file, user_id, segment_no, answer_type)
+            result = process_audio_segment(audio_file, user_id, segment_no)
 
             qa = result.get("question_answers") or {}
             audio_update = (
