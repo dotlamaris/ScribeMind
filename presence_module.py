@@ -176,9 +176,9 @@ def question_answer_response(
     now = datetime.datetime.now()
 
     try:
-        system_prompt = "You are a helpful and accurate assistant. Provide clear, concise answers to user questions."
+        system_prompt = "This is a voice transcript. Consider the following text, focus on the last part, and follow any instructions throughout, but keep your response clear, concise and audio friendly. 20-50 words max."
 
-        user_message = f"CONTEXT:\n{context}"
+        user_message = f"\nUSER TRANSCRIPT:\n{context}"
 
         # full_prompt = f"{system_prompt}\n{user_message}"
         full_prompt = f"{user_message}"

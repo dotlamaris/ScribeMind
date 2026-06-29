@@ -988,6 +988,11 @@
             if (tabName === 'content') {
                 updateTranscriptDisplay();
             }
+
+            // Update questions display when Questions tab is opened
+            if (tabName === 'questions') {
+                updateQuestionsDisplay();
+            }
         }
 
         // Toggle sort order
