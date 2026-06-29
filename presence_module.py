@@ -180,8 +180,8 @@ def question_answer_response(
 
         user_message = f"\nUSER TRANSCRIPT:\n{context}"
 
-        # full_prompt = f"{system_prompt}\n{user_message}"
-        full_prompt = f"{user_message}"
+        full_prompt = f"{system_prompt}\n{user_message}"
+        # full_prompt = f"{user_message}"
 
         # log it
         logger.log(
